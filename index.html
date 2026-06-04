@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Water Monitor</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f1a;
+    --panel: #0f1829;
+    --border: #1a2d4a;
+    --accent: #00b4ff;
+    --accent2: #00e5cc;
+    --danger: #ff3d5a;
+    --warn: #ffaa00;
+    --success: #00e676;
+    --text: #c8dff0;
+    --muted: #4a6a8a;
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Exo 2', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 12px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-icon { font-size: 22px; }
+  .header-title { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.04em; }
+  .header-sub { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+
+  /* Badges row */
+  .badges { display: flex; gap: 6px; flex-direction: column; align-items: flex-end; }
+  .badge {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+  }
+  .badge-online  { background: rgba(0,230,118,0.12); color: var(--success); border: 1px solid rgba(0,230,118,0.3); }
+  .badge-offline { background: rgba(255,61,90,0.12);  color: var(--danger);  border: 1px solid rgba(255,61,90,0.3); }
+  .badge-simu    { background: rgba(0,180,255,0.12);  color: var(--accent);  border: 1px solid rgba(0,180,255,0.3); }
+  .badge-live    { background: rgba(255,170,0,0.12);  color: var(--warn);    border: 1px solid rgba(255,170,0,0.3); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot-green { background: var(--success); animation: pulse 2s infinite; }
+  .dot-red   { background: var(--danger); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* Panels */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .panel-label {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .panel-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* Metrics */
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .metric {
+    background: rgba(0,180,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    position: relative; overflow: hidden;
+  }
+  .metric.full { grid-column: span 2; }
+  .metric::before {
+    content:''; position:absolute; top:0; left:0;
+    width:3px; height:100%;
+    background: var(--accent); border-radius:3px 0 0 3px;
+  }
+  .metric.flow::before { background: var(--accent2); }
+  .metric-lbl { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-bottom: 6px; }
+  .metric-val { font-size: 26px; font-weight: 300; font-family: var(--mono); color: #fff; }
+  .metric-unit { font-size: 13px; color: var(--accent); margin-left: 3px; }
+
+  /* Consumption */
+  .cons-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .cons-row:last-child { border-bottom: none; }
+  .cons-lbl { font-size: 13px; color: var(--muted); font-family: var(--mono); }
+  .cons-val { font-size: 15px; font-family: var(--mono); color: #fff; }
+  .cons-unit { font-size: 11px; color: var(--accent); margin-left: 3px; }
+
+  /* Buttons */
+  .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn {
+    padding: 12px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    transition: all 0.2s;
+    letter-spacing: 0.04em;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn.active-home  { border-color: var(--success); color: var(--success); background: rgba(0,230,118,0.08); }
+  .btn.active-out   { border-color: var(--warn);    color: var(--warn);    background: rgba(255,170,0,0.08); }
+  .btn.active-open  { border-color: var(--accent);  color: var(--accent);  background: rgba(0,180,255,0.08); }
+  .btn.active-close { border-color: var(--danger);  color: var(--danger);  background: rgba(255,61,90,0.08); }
+
+  /* Leak alert */
+  .leak-alert {
+    display: none;
+    align-items: center; gap: 10px;
+    padding: 12px 14px;
+    background: rgba(255,61,90,0.1);
+    border: 1px solid rgba(255,61,90,0.4);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 13px; color: var(--danger);
+    font-family: var(--mono);
+    animation: blink 1s infinite;
+  }
+  .leak-alert.show { display: flex; }
+  @keyframes blink { 0%,100%{border-color:rgba(255,61,90,0.4)} 50%{border-color:rgba(255,61,90,0.9)} }
+
+  /* Log */
+  .log-box {
+    background: #080d16;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    height: 160px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .log-box::-webkit-scrollbar { width: 4px; }
+  .log-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .log-entry { display: flex; gap: 8px; line-height: 1.5; }
+  .log-ts   { color: var(--muted); min-width: 58px; flex-shrink: 0; }
+  .log-ok   { color: var(--success); }
+  .log-warn { color: var(--warn); }
+  .log-info { color: var(--accent); }
+  .log-err  { color: var(--danger); }
+</style>
+</head>
+<body>
+
+<script>
+  const FIREBASE_URL = "https://project-water-v5-default-rtdb.firebaseio.com";
+  const BOT_TOKEN    = "8772807332:AAF3RHE35Mc8q6omQjD6WjroB5d6XqfjXCA";
+  const CHAT_ID      = "8818001527";
+  const OFFLINE_SEC  = 60;
+</script>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <span class="header-icon">💧</span>
+    <div>
+      <div class="header-title">WATER MONITOR</div>
+      <div class="header-sub" id="last-seen">connecting...</div>
+    </div>
+  </div>
+  <div class="badges">
+    <div class="badge badge-offline" id="status-badge">
+      <span class="dot dot-red" id="status-dot"></span>
+      <span id="status-txt">OFFLINE</span>
+    </div>
+    <div class="badge badge-simu" id="mode-badge">
+      <span id="mode-txt">...</span>
+    </div>
+  </div>
+</div>
+
+<!-- Leak alert -->
+<div class="leak-alert" id="leak-alert">
+  ⚠ POSSIBLE LEAK — flow detected while AWAY!
+</div>
+
+<!-- Live readings -->
+<div class="panel">
+  <div class="panel-label">Live readings</div>
+  <div class="metrics-grid">
+    <div class="metric">
+      <div class="metric-lbl">TEMPERATURE</div>
+      <div class="metric-val" id="val-temp">--<span class="metric-unit">°C</span></div>
+    </div>
+    <div class="metric">
+      <div class="metric-lbl">HUMIDITY</div>
+      <div class="metric-val" id="val-hum">--<span class="metric-unit">%</span></div>
+    </div>
+    <div class="metric full flow">
+      <div class="metric-lbl">FLOW (counter out)</div>
+      <div class="metric-val" id="val-flow">--<span class="metric-unit">L</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Consumption -->
+<div class="panel">
+  <div class="panel-label">Consumption</div>
+  <div class="cons-row">
+    <span class="cons-lbl">TODAY (daily)</span>
+    <span class="cons-val" id="val-daily">0<span class="cons-unit">L</span></span>
+  </div>
+  <div class="cons-row">
+    <span class="cons-lbl">THIS MONTH (mtd)</span>
+    <span class="cons-val" id="val-mtd">0<span class="cons-unit">L</span></span>
+  </div>
+  <div class="cons-row">
+    <span class="cons-lbl">THIS YEAR (ytd)</span>
+    <span class="cons-val" id="val-ytd">0<span class="cons-unit">L</span></span>
+  </div>
+</div>
+
+<!-- Mode -->
+<div class="panel">
+  <div class="panel-label">Mode</div>
+  <div class="btn-grid">
+    <button class="btn" id="btn-home" onclick="sendCmd('/mode_home')">
+      🏠 HOME
+    </button>
+    <button class="btn" id="btn-out" onclick="sendCmd('/mode_out')">
+      🚶 AWAY
+    </button>
+  </div>
+</div>
+
+<!-- Valve -->
+<div class="panel">
+  <div class="panel-label">Valve control</div>
+  <div class="btn-grid">
+    <button class="btn" id="btn-open"  onclick="sendCmd('/open')">
+      🔓 OPEN
+    </button>
+    <button class="btn" id="btn-close" onclick="sendCmd('/close')">
+      🔒 CLOSE
+    </button>
+  </div>
+</div>
+
+<!-- Status button -->
+<div class="panel">
+  <div class="panel-label">Commands</div>
+  <div class="btn-grid">
+    <button class="btn active-open" onclick="sendCmd('/status')" style="grid-column:span 2">
+      📊 REQUEST STATUS
+    </button>
+  </div>
+</div>
+
+<!-- Log -->
+<div class="panel">
+  <div class="panel-label">Command log</div>
+  <div class="log-box" id="log-box">
+    <div class="log-entry">
+      <span class="log-ts">--:--:--</span>
+      <span class="log-info">Connecting to Firebase...</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Helpers ────────────────────────────────────────────────
+function ts() {
+  return new Date().toLocaleTimeString('el-GR', {hour12:false});
+}
+
+function addLog(msg, type='info') {
+  const box = document.getElementById('log-box');
+  const el  = document.createElement('div');
+  el.className = 'log-entry';
+  el.innerHTML = `<span class="log-ts">${ts()}</span><span class="log-${type}">${msg}</span>`;
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setHTML(id, html) {
+  document.getElementById(id).innerHTML = html;
+}
+
+// ── Firebase ───────────────────────────────────────────────
+async function fbGet() {
+  try {
+    const r = await fetch(FIREBASE_URL + '/system.json');
+    return await r.json();
+  } catch(e) {
+    return null;
+  }
+}
+
+async function fbSet(path, value) {
+  try {
+    await fetch(FIREBASE_URL + path + '.json', {
+      method: 'PUT',
+      body: JSON.stringify(value)
+    });
+  } catch(e) {
+    addLog('Firebase write error', 'err');
+  }
+}
+
+// ── Telegram ───────────────────────────────────────────────
+async function tgSend(text) {
+  try {
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(text)}`;
+    await fetch(url);
+  } catch(e) {
+    addLog('Telegram error', 'err');
+  }
+}
+
+// ── Send command ───────────────────────────────────────────
+async function sendCmd(cmd) {
+  addLog('Sending: ' + cmd, 'info');
+  await tgSend(cmd);
+
+  // Άμεση ενημέρωση Firebase για valve/mode
+  if (cmd === '/open')       { await fbSet('/system/valve', 'Open');  addLog('Valve → OPEN',  'ok'); }
+  if (cmd === '/close')      { await fbSet('/system/valve', 'Close'); addLog('Valve → CLOSE', 'err'); }
+  if (cmd === '/mode_home')  { await fbSet('/system/mode',  'Home');  addLog('Mode → HOME',   'ok'); }
+  if (cmd === '/mode_out')   { await fbSet('/system/mode',  'Out');   addLog('Mode → AWAY',   'warn'); }
+  if (cmd === '/status')     { addLog('Status requested via Telegram', 'info'); }
+}
+
+// ── Update UI ──────────────────────────────────────────────
+function updateUI(data) {
+  if (!data) return;
+
+  // counter_out ως FLOW
+  const flow = data.counter_out !== undefined ? data.counter_out : '--';
+  setHTML('val-flow',  `${flow}<span class="metric-unit">L</span>`);
+
+  // Consumption
+  setHTML('val-daily', `${data.daily ?? 0}<span class="cons-unit">L</span>`);
+  setHTML('val-mtd',   `${data.mtd   ?? 0}<span class="cons-unit">L</span>`);
+  setHTML('val-ytd',   `${data.ytd   ?? 0}<span class="cons-unit">L</span>`);
+
+  // Mode buttons
+  const mode = data.mode || 'Home';
+  document.getElementById('btn-home').className = 'btn' + (mode === 'Home' ? ' active-home' : '');
+  document.getElementById('btn-out').className  = 'btn' + (mode === 'Out'  ? ' active-out'  : '');
+
+  // Valve buttons
+  const valve = data.valve || 'Open';
+  document.getElementById('btn-open').className  = 'btn' + (valve === 'Open'  ? ' active-open'  : '');
+  document.getElementById('btn-close').className = 'btn' + (valve === 'Close' ? ' active-close' : '');
+
+  // Leak detection
+  const counterOut = parseFloat(data.counter_out) || 0;
+  document.getElementById('leak-alert').className =
+    (mode === 'Out' && counterOut > 0) ? 'leak-alert show' : 'leak-alert';
+
+  // SIMU/LIVE badge
+  const sysMode = data.system_mode || 'SIMU';
+  const modeBadge = document.getElementById('mode-badge');
+  modeBadge.className = 'badge ' + (sysMode === 'LIVE' ? 'badge-live' : 'badge-simu');
+  document.getElementById('mode-txt').textContent = sysMode;
+
+  // Online/Offline
+  const ts_val    = data.last_update || 0;
+  const secsAgo   = Math.floor(Date.now()/1000) - ts_val;
+  const isOnline  = secsAgo < OFFLINE_SEC;
+  const badge     = document.getElementById('status-badge');
+  const dot       = document.getElementById('status-dot');
+  badge.className = 'badge ' + (isOnline ? 'badge-online' : 'badge-offline');
+  dot.className   = 'dot '   + (isOnline ? 'dot-green'   : 'dot-red');
+  document.getElementById('status-txt').textContent  = isOnline ? 'ONLINE' : 'OFFLINE';
+  document.getElementById('last-seen').textContent   =
+    isOnline ? `last update: ${secsAgo}s ago` : `last seen: ${secsAgo}s ago`;
+}
+
+// ── Poll Firebase every 3s ─────────────────────────────────
+let lastTs = 0;
+
+async function poll() {
+  const data = await fbGet();
+  if (data) {
+    updateUI(data);
+    if ((data.last_update || 0) !== lastTs) {
+      lastTs = data.last_update || 0;
+      addLog('Firebase updated', 'ok');
+    }
+  } else {
+    document.getElementById('status-badge').className = 'badge badge-offline';
+    document.getElementById('status-txt').textContent = 'OFFLINE';
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────
+if (window.Telegram && window.Telegram.WebApp) {
+  window.Telegram.WebApp.ready();
+  window.Telegram.WebApp.expand();
+}
+
+addLog('Dashboard loaded', 'info');
+poll();
+setInterval(poll, 3000);
+</script>
+</body>
+</html>
