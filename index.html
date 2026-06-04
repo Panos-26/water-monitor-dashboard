@@ -257,13 +257,30 @@ async function tgSend(text) {
 async function sendCmd(cmd) {
   addLog('CMD: '+cmd,'info');
   await tgSend(cmd);
-  if (cmd==='/open')      { await fbSet('/system/valve','Open');  addLog('Valve → OPEN','ok'); }
-  if (cmd==='/close')     { await fbSet('/system/valve','Close'); addLog('Valve → CLOSE','err'); }
-  if (cmd==='/mode_home') { await fbSet('/system/mode','Home');   addLog('Mode → HOME','ok'); }
-  if (cmd==='/mode_out')  { await fbSet('/system/mode','Out');    addLog('Mode → AWAY','warn'); }
+
+  if (cmd==='/open') {
+    await fbSet('/system/cmd_valve','Open');
+    addLog('⏳ Περιμένετε... ενημερώνω βάνα','warn');
+  }
+  if (cmd==='/close') {
+    await fbSet('/system/cmd_valve','Close');
+    addLog('⏳ Περιμένετε... ενημερώνω βάνα','warn');
+  }
+  if (cmd==='/mode_home') {
+    await fbSet('/system/cmd_mode','Home');
+    await fbSet('/system/mode','Home');
+    addLog('⏳ Περιμένετε... ενημερώνω mode','warn');
+  }
+  if (cmd==='/mode_out') {
+    await fbSet('/system/cmd_mode','Out');
+    await fbSet('/system/mode','Out');
+    addLog('⏳ Περιμένετε... ενημερώνω mode','warn');
+  }
 }
 
-let lastTs = 0;
+let lastTs   = 0;
+let lastCmdV = '';
+
 function updateUI(data) {
   if (!data) return;
   setHTML('val-flow',  `${data.counter_out??'--'}<span class="metric-unit">L</span>`);
@@ -273,10 +290,18 @@ function updateUI(data) {
 
   const mode  = data.mode  || 'Home';
   const valve = data.valve || 'Open';
+  const cmdV  = data.cmd_valve || '';
+
   document.getElementById('btn-home').className  = 'btn'+(mode==='Home' ?' active-home' :'');
   document.getElementById('btn-out').className   = 'btn'+(mode==='Out'  ?' active-out'  :'');
   document.getElementById('btn-open').className  = 'btn'+(valve==='Open' ?' active-open' :'');
   document.getElementById('btn-close').className = 'btn'+(valve==='Close'?' active-close':'');
+
+  // Επιβεβαίωση: ESP32 εκτέλεσε την εντολή (cmd_valve έγινε κενό)
+  if (cmdV === '' && lastCmdV !== '') {
+    addLog('✅ Βάνα επιβεβαιώθηκε → ' + valve, 'ok');
+  }
+  lastCmdV = cmdV;
 
   document.getElementById('leak-alert').className =
     (mode==='Out' && parseFloat(data.counter_out||0)>0) ? 'leak-alert show' : 'leak-alert';
