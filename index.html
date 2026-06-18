@@ -294,6 +294,8 @@ function updateUI(data) {
   setHTML('val-daily', `${data.daily??0}<span class="cons-unit">L</span>`);
   setHTML('val-mtd',   `${data.mtd??0}<span class="cons-unit">L</span>`);
   setHTML('val-ytd',   `${data.ytd??0}<span class="cons-unit">L</span>`);
+  setHTML('val-temp',  `${data.temp??'--'}<span class="metric-unit">°C</span>`);
+  setHTML('val-hum',   `${data.hum??'--'}<span class="metric-unit">%</span>`);
 
   const mode  = data.state_stable || 'Home';
   const valve = data.valve_stable || 'Open';
@@ -362,3 +364,4 @@ setInterval(poll, 3000);
 </script>
 </body>
 </html>
+
