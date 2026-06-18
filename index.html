@@ -328,8 +328,11 @@ function updateUI(data) {
   document.getElementById('status-badge').className = 'badge '+(isOnline?'badge-online':'badge-offline');
   document.getElementById('status-dot').className   = 'dot'+(isOnline?' dot-green':'');
   document.getElementById('status-txt').textContent = isOnline?'ONLINE':'OFFLINE';
+  const updTimeStr = (data.last_update)
+    ? new Date(data.last_update*1000).toLocaleTimeString('el-GR',{hour12:false})
+    : '--:--:--';
   document.getElementById('last-seen').textContent  =
-    isOnline ? `updated: ${secsAgo}s ago` : `last seen: ${secsAgo}s ago`;
+    isOnline ? `updated: ${updTimeStr}` : `last seen: ${updTimeStr}`;
 
   if ((data.last_update||0) !== lastTs) {
     lastTs = data.last_update||0;
