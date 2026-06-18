@@ -285,10 +285,12 @@ async function sendCmd(cmd) {
   }
 }
 
-let lastTs   = 0;
-let lastCmdV = '';
-let lastEventTs = 0;
-let leakActive  = false;  // παραμένει true μέχρι ο χρήστης να ανοίξει τη βάνα
+let lastKnownUpdateVal = 0;   // τιμή last_update που είδαμε τελευταία
+let lastSeenAt        = 0;   // JS ms όταν είδαμε αλλαγή στο last_update
+let wasOnline         = null; // null=άγνωστο, true/false για state-change logging
+let lastCmdV          = '';
+let lastEventTs       = 0;
+let leakActive        = false;  // true μέχρι ο χρήστης να ανοίξει τη βάνα
 
 function updateUI(data) {
   if (!data) return;
@@ -301,69 +303,86 @@ function updateUI(data) {
 
   const mode  = data.state_stable || 'Home';
   const valve = data.valve_stable || 'Open';
-  const cmdV  = data.valve_mob || '';
+  const cmdV  = data.valve_mob    || '';
 
   document.getElementById('btn-home').className  = 'btn'+(mode==='Home' ?' active-home' :'');
   document.getElementById('btn-out').className   = 'btn'+(mode==='Out'  ?' active-out'  :'');
   document.getElementById('btn-open').className  = 'btn'+(valve==='Open' ?' active-open' :'');
   document.getElementById('btn-close').className = 'btn'+(valve==='Close'?' active-close':'');
 
-  // Status badge: εμφανές κείμενο, δεν χρειάζεται ερμηνεία χρώματος
+  // Status badge mode
   document.getElementById('mode-status-badge').className =
     'badge panel-status-badge ' + (mode==='Out' ? 'badge-away' : 'badge-home');
   document.getElementById('mode-status-txt').textContent =
     mode==='Out' ? 'ΕΚΤΟΣ ΣΠΙΤΙΟΥ' : 'ΣΤΟ ΣΠΙΤΙ';
 
-  // Επιβεβαίωση: ESP32 εκτέλεσε εντολή βάνας (valve_mob έγινε κενό)
+  // ── ONLINE/OFFLINE: βασισμένο στο ΠΟΤΕ είδαμε αλλαγή, όχι σε absolute timestamp ──
+  // Δεν εξαρτόμαστε από epoch· αν το last_update άλλαξε τιμή → ESP32 είναι ζωντανός.
+  const curUpdateVal = data.last_update || 0;
+  if (curUpdateVal !== lastKnownUpdateVal) {
+    lastKnownUpdateVal = curUpdateVal;
+    lastSeenAt = Date.now();
+  }
+  const msSince  = lastSeenAt > 0 ? Date.now() - lastSeenAt : Infinity;
+  const isOnline = lastSeenAt > 0 && msSince < OFFLINE_SEC * 1000;
+
+  document.getElementById('status-badge').className = 'badge '+(isOnline?'badge-online':'badge-offline');
+  document.getElementById('status-dot').className   = 'dot'+(isOnline?' dot-green':'');
+  document.getElementById('status-txt').textContent = isOnline ? 'ONLINE' : 'OFFLINE';
+
+  // Ώρα: από last_update_local που στέλνει ο ESP32 ("2026-06-18 13:17:24" → "13:17:24")
+  const timeStr = data.last_update_local
+    ? data.last_update_local.split(' ')[1]
+    : '--:--:--';
+  document.getElementById('last-seen').textContent =
+    isOnline ? `updated: ${timeStr}` : `last seen: ${timeStr}`;
+
+  // Log μόνο όταν αλλάζει κατάσταση (όχι κάθε 5s)
+  if (isOnline !== wasOnline) {
+    wasOnline = isOnline;
+    addLog(isOnline ? '🟢 ESP32 ONLINE' : '🔴 ESP32 OFFLINE', isOnline ? 'ok' : 'err');
+  }
+
+  const sysMode = data.system_mode || 'SIMU';
+  document.getElementById('mode-badge').className = 'badge '+(sysMode==='LIVE'?'badge-live':'badge-simu');
+  document.getElementById('mode-txt').textContent = sysMode;
+
+  // ── Επιβεβαίωση εντολής βάνας από Dashboard ──
   if (cmdV === '' && lastCmdV !== '') {
     addLog('✅ Βάνα επιβεβαιώθηκε → ' + valve, 'ok');
   }
   lastCmdV = cmdV;
 
-  // ── last_event: log entries από αυτόματα events (διαρροή, button κλπ) ──
+  // ── last_event: log αυτόματων events (διαρροή, button, dashboard) ──
   const evTs  = data.last_event_ts || 0;
   const evMsg = data.last_event    || '';
   if (evTs !== lastEventTs && evTs !== 0) {
     lastEventTs = evTs;
-    const isWarn = evMsg.includes('⚠️');
-    addLog(evMsg, isWarn ? 'warn' : 'ok');
+    addLog(evMsg, evMsg.includes('⚠️') ? 'warn' : 'ok');
+    if (evMsg.includes('ΔΙΑΡΡΟΗ')) leakActive = true;
   }
 
   // ── Leak alarm ────────────────────────────────────────────────
-  // Ενεργοποιείται από last_event που περιέχει "ΔΙΑΡΡΟΗ"
-  if (evMsg.includes('ΔΙΑΡΡΟΗ') && evTs === lastEventTs) leakActive = true;
-  // Σβήνει μόνο όταν η βάνα ανοίξει ξανά (χρήστης επέλεξε συνειδητά)
+  // Επίσης ανάβει αν ανοίξει το κινητό μετά από event διαρροής που ήδη υπάρχει στη DB
+  if (mode === 'Out' && valve === 'Close' && evMsg.includes('ΔΙΑΡΡΟΗ')) leakActive = true;
+  // Σβήνει μόνο όταν ο χρήστης ανοίξει ξανά τη βάνα (συνειδητή πράξη)
   if (valve === 'Open') leakActive = false;
   document.getElementById('leak-alert').className =
     (mode === 'Out' && leakActive) ? 'leak-alert show' : 'leak-alert';
-
-  const sysMode = data.system_mode||'SIMU';
-  document.getElementById('mode-badge').className = 'badge '+(sysMode==='LIVE'?'badge-live':'badge-simu');
-  document.getElementById('mode-txt').textContent = sysMode;
-
-  const secsAgo  = Math.floor(Date.now()/1000)-(data.last_update||0);
-  const isOnline = secsAgo < OFFLINE_SEC;
-  document.getElementById('status-badge').className = 'badge '+(isOnline?'badge-online':'badge-offline');
-  document.getElementById('status-dot').className   = 'dot'+(isOnline?' dot-green':'');
-  document.getElementById('status-txt').textContent = isOnline?'ONLINE':'OFFLINE';
-  const updTimeStr = (data.last_update)
-    ? new Date(data.last_update*1000).toLocaleTimeString('el-GR',{hour12:false})
-    : '--:--:--';
-  document.getElementById('last-seen').textContent  =
-    isOnline ? `updated: ${updTimeStr}` : `last seen: ${updTimeStr}`;
-
-  if ((data.last_update||0) !== lastTs) {
-    lastTs = data.last_update||0;
-    addLog('Firebase OK','ok');
-  }
 }
 
 async function poll() {
   const data = await fbGet();
-  if (data) updateUI(data);
-  else {
-    document.getElementById('status-badge').className='badge badge-offline';
-    document.getElementById('status-txt').textContent='OFFLINE';
+  if (data) {
+    updateUI(data);
+  } else {
+    if (wasOnline !== false) {
+      wasOnline = false;
+      document.getElementById('status-badge').className = 'badge badge-offline';
+      document.getElementById('status-dot').className   = 'dot';
+      document.getElementById('status-txt').textContent = 'OFFLINE';
+      addLog('🔴 Firebase απρόσιτο', 'err');
+    }
   }
 }
 
@@ -380,4 +399,5 @@ setInterval(poll, 3000);
 </script>
 </body>
 </html>
+
 
