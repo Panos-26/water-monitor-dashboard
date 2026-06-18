@@ -142,7 +142,7 @@
   const FIREBASE_URL = "https://project-water-v5-default-rtdb.firebaseio.com";
   const BOT_TOKEN    = "8772807332:AAF3RHE35Mc8q6omQjD6WjroB5d6XqfjXCA";
   const CHAT_ID      = "8818001527";
-  const OFFLINE_SEC  = 60;
+  const OFFLINE_SEC  = 15;  // 3 × 5s updates — μετά από αυτό θεωρείται OFFLINE
 </script>
 
 <!-- Header -->
@@ -287,6 +287,8 @@ async function sendCmd(cmd) {
 
 let lastTs   = 0;
 let lastCmdV = '';
+let lastEventTs = 0;
+let leakActive  = false;  // παραμένει true μέχρι ο χρήστης να ανοίξει τη βάνα
 
 function updateUI(data) {
   if (!data) return;
@@ -318,8 +320,22 @@ function updateUI(data) {
   }
   lastCmdV = cmdV;
 
+  // ── last_event: log entries από αυτόματα events (διαρροή, button κλπ) ──
+  const evTs  = data.last_event_ts || 0;
+  const evMsg = data.last_event    || '';
+  if (evTs !== lastEventTs && evTs !== 0) {
+    lastEventTs = evTs;
+    const isWarn = evMsg.includes('⚠️');
+    addLog(evMsg, isWarn ? 'warn' : 'ok');
+  }
+
+  // ── Leak alarm ────────────────────────────────────────────────
+  // Ενεργοποιείται από last_event που περιέχει "ΔΙΑΡΡΟΗ"
+  if (evMsg.includes('ΔΙΑΡΡΟΗ') && evTs === lastEventTs) leakActive = true;
+  // Σβήνει μόνο όταν η βάνα ανοίξει ξανά (χρήστης επέλεξε συνειδητά)
+  if (valve === 'Open') leakActive = false;
   document.getElementById('leak-alert').className =
-    (mode==='Out' && parseFloat(data.counter_out||0)>0) ? 'leak-alert show' : 'leak-alert';
+    (mode === 'Out' && leakActive) ? 'leak-alert show' : 'leak-alert';
 
   const sysMode = data.system_mode||'SIMU';
   document.getElementById('mode-badge').className = 'badge '+(sysMode==='LIVE'?'badge-live':'badge-simu');
