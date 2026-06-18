@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="el">
 <head>
@@ -44,6 +45,8 @@
   .badge-offline { background: #cc2244; color: #fff; }
   .badge-simu    { background: #0088cc; color: #fff; }
   .badge-live    { background: #cc8800; color: #fff; }
+  .badge-home    { background: #00aa55; color: #fff; }
+  .badge-away    { background: #cc8800; color: #fff; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: white; }
   .dot-green { animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
@@ -62,6 +65,7 @@
     border-bottom: 2px solid #e0e8f0;
     padding-bottom: 5px;
   }
+  .panel-status-badge { margin-bottom: 10px; align-self: flex-start; }
 
   /* ── Metrics ── */
   .metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
@@ -204,6 +208,9 @@
 <!-- Mode -->
 <div class="panel">
   <div class="panel-label">🏠 Mode</div>
+  <div class="badge panel-status-badge" id="mode-status-badge">
+    <span id="mode-status-txt">...</span>
+  </div>
   <div class="btn-grid">
     <button class="btn" id="btn-home" onclick="sendCmd('/mode_home')">🏠 HOME</button>
     <button class="btn" id="btn-out"  onclick="sendCmd('/mode_out')">🚶 AWAY</button>
@@ -254,6 +261,9 @@ async function tgSend(text) {
   try { await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(text)}`); }
   catch(e) { addLog('Telegram error','err'); }
 }
+
+// Valve: ο ESP32 πρέπει να κινήσει κάτι φυσικό -> περιμένουμε επιβεβαίωση (valve_mob).
+// Mode: είναι αμιγώς software state, δεν χρειάζεται επιβεβαίωση από τον ESP32 -> instant.
 async function sendCmd(cmd) {
   addLog('CMD: ' + cmd, 'info');
   await tgSend(cmd);
@@ -267,12 +277,12 @@ async function sendCmd(cmd) {
     addLog('⏳ Περιμένετε... ενημερώνω βάνα', 'warn');
   }
   if (cmd === '/mode_home') {
-    await fbSet('/system/state_mob', 'Home');
-    addLog('⏳ Περιμένετε... ενημερώνω mode', 'warn');
+    await fbSet('/system/state_stable', 'Home');
+    addLog('✅ Mode: ΣΤΟ ΣΠΙΤΙ', 'ok');
   }
   if (cmd === '/mode_out') {
-    await fbSet('/system/state_mob', 'Out');
-    addLog('⏳ Περιμένετε... ενημερώνω mode', 'warn');
+    await fbSet('/system/state_stable', 'Out');
+    addLog('✅ Mode: ΕΚΤΟΣ ΣΠΙΤΙΟΥ', 'ok');
   }
 }
 
@@ -286,8 +296,8 @@ function updateUI(data) {
   setHTML('val-mtd',   `${data.mtd??0}<span class="cons-unit">L</span>`);
   setHTML('val-ytd',   `${data.ytd??0}<span class="cons-unit">L</span>`);
 
-  const mode  = data.state_stable || data.mode  || 'Home';
-  const valve = data.valve_stable || data.valve || 'Open';
+  const mode  = data.state_stable || 'Home';
+  const valve = data.valve_stable || 'Open';
   const cmdV  = data.valve_mob || '';
 
   document.getElementById('btn-home').className  = 'btn'+(mode==='Home' ?' active-home' :'');
@@ -295,7 +305,13 @@ function updateUI(data) {
   document.getElementById('btn-open').className  = 'btn'+(valve==='Open' ?' active-open' :'');
   document.getElementById('btn-close').className = 'btn'+(valve==='Close'?' active-close':'');
 
-  // Επιβεβαίωση: ESP32 εκτέλεσε εντολή (valve_mob έγινε κενό)
+  // Status badge: εμφανές κείμενο, δεν χρειάζεται ερμηνεία χρώματος
+  document.getElementById('mode-status-badge').className =
+    'badge panel-status-badge ' + (mode==='Out' ? 'badge-away' : 'badge-home');
+  document.getElementById('mode-status-txt').textContent =
+    mode==='Out' ? 'ΕΚΤΟΣ ΣΠΙΤΙΟΥ' : 'ΣΤΟ ΣΠΙΤΙ';
+
+  // Επιβεβαίωση: ESP32 εκτέλεσε εντολή βάνας (valve_mob έγινε κενό)
   if (cmdV === '' && lastCmdV !== '') {
     addLog('✅ Βάνα επιβεβαιώθηκε → ' + valve, 'ok');
   }
