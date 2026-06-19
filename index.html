@@ -67,7 +67,7 @@
   .panel-status-badge { margin-bottom: 10px; align-self: flex-start; }
 
   /* ── Metrics ── */
-  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
   .metric {
     background: #f0f5fa;
     border: 2px solid #c0d0e0;
@@ -79,6 +79,9 @@
   .metric-unit { font-size: 14px; color: #0088cc; margin-left: 2px; }
   .metric.flow { border-color: #00aaaa; background: #eafafa; }
   .metric.flow .metric-lbl { color: #007788; }
+  .metric.flow-out { border-color: #cc8800; background: #fff6e6; }
+  .metric.flow-out .metric-lbl { color: #996600; }
+  .metric.flow-out .metric-unit { color: #cc8800; }
 
   /* ── Consumption ── */
   .cons-row {
@@ -183,6 +186,10 @@
     <div class="metric flow">
       <div class="metric-lbl">FLOW</div>
       <div class="metric-val" id="val-flow">--<span class="metric-unit">L</span></div>
+    </div>
+    <div class="metric flow-out">
+      <div class="metric-lbl">FLOW OUT</div>
+      <div class="metric-val" id="val-flowout">--<span class="metric-unit">L</span></div>
     </div>
   </div>
 </div>
@@ -294,7 +301,8 @@ let leakActive        = false;  // true μέχρι ο χρήστης να ανο
 
 function updateUI(data) {
   if (!data) return;
-  setHTML('val-flow',  `${data.counter_out??'--'}<span class="metric-unit">L</span>`);
+  setHTML('val-flow',    `${data.flow??'--'}<span class="metric-unit">L</span>`);
+  setHTML('val-flowout', `${data.counter_out??'--'}<span class="metric-unit">L</span>`);
   setHTML('val-daily', `${data.daily??0}<span class="cons-unit">L</span>`);
   setHTML('val-mtd',   `${data.mtd??0}<span class="cons-unit">L</span>`);
   setHTML('val-ytd',   `${data.ytd??0}<span class="cons-unit">L</span>`);
@@ -399,5 +407,3 @@ setInterval(poll, 3000);
 </script>
 </body>
 </html>
-
-
