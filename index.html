@@ -6,6 +6,9 @@
 <meta name="color-scheme" content="light">
 <title>Water Monitor</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-database-compat.js"></script>
 <style>
   /* Force light theme — override Telegram dark mode */
   :root { color-scheme: light only !important; }
@@ -137,16 +140,72 @@
   .log-warn { color: #996600; font-weight: 600; }
   .log-info { color: #005599; }
   .log-err  { color: #cc2244; font-weight: 600; }
+
+  /* ── Login screen ── */
+  .login-screen {
+    position: fixed; inset: 0;
+    background: #1a3a5c;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+  }
+  .login-box {
+    background: #ffffff; border-radius: 14px; padding: 28px 24px;
+    width: 100%; max-width: 320px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .login-title {
+    font-size: 22px; font-weight: 700; color: #1a3a5c;
+    text-align: center; margin-bottom: 6px;
+  }
+  .login-box input {
+    padding: 12px 14px; border-radius: 8px; border: 2px solid #c0ccd8;
+    font-size: 16px; font-family: Arial, sans-serif;
+  }
+  .login-box button {
+    padding: 12px; border-radius: 8px; border: none;
+    background: #0088cc; color: #fff; font-size: 16px; font-weight: 700;
+    cursor: pointer;
+  }
+  .login-box button:active { transform: scale(0.97); }
+  .login-error { color: #cc2244; font-size: 13px; text-align: center; min-height: 16px; }
+  .logout-link {
+    font-size: 11px; color: #aac8e8; text-decoration: underline;
+    cursor: pointer; margin-top: 2px; text-align: right;
+  }
 </style>
 </head>
 <body>
 
 <script>
-  const FIREBASE_URL = "https://project-water-v5-default-rtdb.firebaseio.com";
+  // TODO: Αντικατάστησε με το ΔΙΚΟ ΣΟΥ firebaseConfig από Project Settings → General → Your apps
+  const firebaseConfig = {
+    apiKey: "AIzaSyD3DYCqG4kN2m-4EFVj3zQI5gtHHRI2BTc",
+    authDomain: "project-water-v5.firebaseapp.com",
+    databaseURL: "https://project-water-v5-default-rtdb.firebaseio.com",
+    projectId: "project-water-v5"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db   = firebase.database();
+
   const BOT_TOKEN    = "8772807332:AAF3RHE35Mc8q6omQjD6WjroB5d6XqfjXCA";
   const CHAT_ID      = "8818001527";
   const OFFLINE_SEC  = 15;  // 3 × 5s updates — μετά από αυτό θεωρείται OFFLINE
 </script>
+
+<!-- Login screen -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-title">💧 Water Monitor</div>
+    <input type="email"    id="login-email"    placeholder="Email"    autocomplete="username">
+    <input type="password" id="login-password" placeholder="Κωδικός" autocomplete="current-password">
+    <button id="login-btn" onclick="doLogin()">Σύνδεση</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<div id="app-content" style="display:none; flex-direction:column; gap:7px;">
 
 <!-- Header -->
 <div class="header">
@@ -165,11 +224,12 @@
     <div class="badge badge-simu" id="mode-badge">
       <span id="mode-txt">...</span>
     </div>
+    <span class="logout-link" onclick="doLogout()">🚪 Έξοδος</span>
   </div>
 </div>
 
 <!-- Leak alert -->
-<div class="leak-alert" id="leak-alert">⚠️ LEAK — flow while AWAY!</div>
+<div class="leak-alert" id="leak-alert">⚠️ Διαρροή εκτός σπιτιού! Βάνα αυτόματα OFF.</div>
 
 <!-- Live readings -->
 <div class="panel">
@@ -243,6 +303,8 @@
   </div>
 </div>
 
+</div><!-- /app-content -->
+
 <script>
 function ts() { return new Date().toLocaleTimeString('el-GR',{hour12:false}); }
 function addLog(msg, type='info') {
@@ -256,11 +318,11 @@ function addLog(msg, type='info') {
 function setHTML(id, html) { document.getElementById(id).innerHTML = html; }
 
 async function fbGet() {
-  try { const r = await fetch(FIREBASE_URL+'/system.json'); return await r.json(); }
+  try { const snap = await db.ref('/system').once('value'); return snap.val(); }
   catch(e) { return null; }
 }
 async function fbSet(path, value) {
-  try { await fetch(FIREBASE_URL+path+'.json',{method:'PUT',body:JSON.stringify(value)}); }
+  try { await db.ref(path).set(value); }
   catch(e) { addLog('Firebase error','err'); }
 }
 async function tgSend(text) {
@@ -401,9 +463,38 @@ if (window.Telegram?.WebApp) {
   document.body.style.background = '#e8edf2';
   document.documentElement.style.background = '#e8edf2';
 }
-addLog('Dashboard loaded','info');
-poll();
-setInterval(poll, 3000);
+
+// ── Auth: login/logout, η εφαρμογή ξεκινά ΜΟΝΟ μετά από επιτυχή σύνδεση ──
+let pollStarted = false;
+
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  document.getElementById('login-error').textContent = '';
+  auth.signInWithEmailAndPassword(email, pass).catch(err => {
+    document.getElementById('login-error').textContent = 'Λάθος email ή κωδικός.';
+  });
+}
+
+function doLogout() {
+  auth.signOut();
+}
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-content').style.display  = 'flex';
+    if (!pollStarted) {
+      pollStarted = true;
+      addLog('Dashboard loaded', 'info');
+      poll();
+      setInterval(poll, 3000);
+    }
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app-content').style.display  = 'none';
+  }
+});
 </script>
 </body>
 </html>
