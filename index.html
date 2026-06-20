@@ -450,9 +450,11 @@ function updateUI(data) {
   document.getElementById('leak-alert').className =
     (mode === 'Out' && leakActive) ? 'leak-alert show' : 'leak-alert';
 
-  // FLOW OUT card: κόκκινο + blink σε διαρροή, σομόν κανονικά
+  // FLOW OUT card: κόκκινο + blink όταν η τιμή ξεπεράσει τα 5L — απευθείας
+  // από τον αριθμό, ανεξάρτητα από mode/event. Στο 0 γυρίζει σομόν, χωρίς blink.
+  const flowOutVal = parseFloat(data.counter_out) || 0;
   document.getElementById('flowout-card').className =
-    'metric flow-out' + ((mode === 'Out' && leakActive) ? ' alert' : '');
+    'metric flow-out' + (flowOutVal >= 5 ? ' alert' : '');
 }
 
 async function poll() {
