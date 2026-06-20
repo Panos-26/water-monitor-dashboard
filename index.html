@@ -85,6 +85,16 @@
   .metric.flow-out { border-color: #cc8800; background: #fff6e6; }
   .metric.flow-out .metric-lbl { color: #996600; }
   .metric.flow-out .metric-unit { color: #cc8800; }
+  .metric.flow-out.alert {
+    border-color: #cc2244; background: #fde0e6;
+    animation: blink-card 1s infinite;
+  }
+  .metric.flow-out.alert .metric-lbl,
+  .metric.flow-out.alert .metric-unit { color: #cc2244; }
+  @keyframes blink-card {
+    0%,100% { border-color: #cc2244; background: #fde0e6; }
+    50%     { border-color: #ff6688; background: #ffe8ec; }
+  }
 
   /* ── Consumption ── */
   .cons-row {
@@ -180,7 +190,7 @@
 <script>
   // TODO: Αντικατάστησε με το ΔΙΚΟ ΣΟΥ firebaseConfig από Project Settings → General → Your apps
   const firebaseConfig = {
-    apiKey: "AIzaSyD3DYCqG4kN2m-4EFVj3zQI5gtHHRI2BTc",
+    apiKey: "ΒΑΛΕ_ΤΟ_API_KEY_ΣΟΥ",
     authDomain: "project-water-v5.firebaseapp.com",
     databaseURL: "https://project-water-v5-default-rtdb.firebaseio.com",
     projectId: "project-water-v5"
@@ -247,7 +257,7 @@
       <div class="metric-lbl">FLOW</div>
       <div class="metric-val" id="val-flow">--<span class="metric-unit">L</span></div>
     </div>
-    <div class="metric flow-out">
+    <div class="metric flow-out" id="flowout-card">
       <div class="metric-lbl">FLOW OUT</div>
       <div class="metric-val" id="val-flowout">--<span class="metric-unit">L</span></div>
     </div>
@@ -439,6 +449,10 @@ function updateUI(data) {
   if (valve === 'Open') leakActive = false;
   document.getElementById('leak-alert').className =
     (mode === 'Out' && leakActive) ? 'leak-alert show' : 'leak-alert';
+
+  // FLOW OUT card: κόκκινο + blink σε διαρροή, σομόν κανονικά
+  document.getElementById('flowout-card').className =
+    'metric flow-out' + ((mode === 'Out' && leakActive) ? ' alert' : '');
 }
 
 async function poll() {
