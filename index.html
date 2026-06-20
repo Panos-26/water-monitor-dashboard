@@ -488,7 +488,7 @@ function doLogin() {
   const pass  = document.getElementById('login-password').value;
   document.getElementById('login-error').textContent = '';
   auth.signInWithEmailAndPassword(email, pass).catch(err => {
-    document.getElementById('login-error').textContent = 'Λάθος email ή κωδικός.';
+    document.getElementById('login-error').textContent = '[' + err.code + '] ' + err.message;
   });
 }
 
