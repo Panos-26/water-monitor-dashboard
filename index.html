@@ -190,7 +190,7 @@
 <script>
   // TODO: Αντικατάστησε με το ΔΙΚΟ ΣΟΥ firebaseConfig από Project Settings → General → Your apps
   const firebaseConfig = {
-    apiKey: "AIzaSyD3DYCqG4kN2m-4EFVj3zQI5gtHHRI2BTc",
+    apiKey: "ΒΑΛΕ_ΤΟ_API_KEY_ΣΟΥ",
     authDomain: "project-water-v5.firebaseapp.com",
     databaseURL: "https://project-water-v5-default-rtdb.firebaseio.com",
     projectId: "project-water-v5"
@@ -302,6 +302,20 @@
   </div>
 </div>
 
+<!-- Calibration -->
+<div class="panel">
+  <div class="panel-label">⚙️ Calibration</div>
+  <div class="cons-row">
+    <span class="cons-lbl" style="font-size:14px;">L/pulse</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="text" id="cal-input" 
+             style="width:100px;padding:6px 8px;border:2px solid #c0ccd8;border-radius:8px;font-size:16px;text-align:center;"
+             placeholder="0.01321">
+      <button class="btn" style="padding:8px 14px;font-size:14px;" onclick="saveCalibration()">💾</button>
+    </div>
+  </div>
+</div>
+
 <!-- Log -->
 <div class="panel">
   <div class="panel-label">📋 Log</div>
@@ -364,6 +378,19 @@ async function sendCmd(cmd) {
   }
 }
 
+async function saveCalibration() {
+  let val = document.getElementById('cal-input').value.trim();
+  // Αποδέχεται κόμμα ή τελεία ως δεκαδικό διαχωριστικό
+  val = val.replace(',', '.');
+  const num = parseFloat(val);
+  if (isNaN(num) || num <= 0 || num > 1) {
+    addLog('❌ Μη έγκυρη τιμή — π.χ. 0.01321', 'err');
+    return;
+  }
+  await fbSet('/system/liters_per_pulse', num);
+  addLog('✅ Calibration: ' + num.toFixed(5) + ' L/pulse αποθηκεύτηκε', 'ok');
+}
+
 let lastKnownUpdateVal = 0;   // τιμή last_update που είδαμε τελευταία
 let lastSeenAt        = 0;   // JS ms όταν είδαμε αλλαγή στο last_update
 let wasOnline         = null; // null=άγνωστο, true/false για state-change logging
@@ -380,6 +407,14 @@ function updateUI(data) {
   setHTML('val-ytd',   `${data.ytd??0}<span class="cons-unit">L</span>`);
   setHTML('val-temp',  `${data.temp??'--'}<span class="metric-unit">°C</span>`);
   setHTML('val-hum',   `${data.hum??'--'}<span class="metric-unit">%</span>`);
+
+  // Εμφάνιση τρέχοντος συντελεστή calibration στο input field
+  if (data.liters_per_pulse) {
+    const calInput = document.getElementById('cal-input');
+    if (calInput && calInput !== document.activeElement) {
+      calInput.placeholder = data.liters_per_pulse.toFixed(5);
+    }
+  }
 
   const mode  = data.state_stable || 'Home';
   const valve = data.valve_stable || 'Open';
