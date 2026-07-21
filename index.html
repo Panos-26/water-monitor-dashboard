@@ -10,82 +10,87 @@
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-database-compat.js"></script>
 <style>
-  /* Force light theme — override Telegram dark mode */
   :root { color-scheme: light only !important; }
   html { filter: none !important; background: #e8edf2 !important; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
-    background: #e8edf2;
-    color: #1a2a3a;
+    background: #e8edf2; color: #1a2a3a;
     font-family: Arial, sans-serif;
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
+    padding: 6px; display: flex; flex-direction: column; gap: 5px;
   }
 
   /* ── Header ── */
   .header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px;
-    background: #1a3a5c;
-    border-radius: 12px;
-    color: white;
+    padding: 7px 12px; background: #1a3a5c; border-radius: 10px; color: white;
   }
-  .header-left { display: flex; align-items: center; gap: 10px; }
-  .header-icon { font-size: 28px; }
-  .header-title { font-size: 22px; font-weight: 700; color: #fff; }
-  .header-sub   { font-size: 12px; color: #aac8e8; margin-top: 2px; }
-  .badges { display: flex; gap: 5px; flex-direction: column; align-items: flex-end; }
+  .header-left { display: flex; align-items: center; gap: 8px; }
+  .header-icon { font-size: 22px; }
+  .header-title { font-size: 18px; font-weight: 700; color: #fff; }
+  .header-sub   { font-size: 11px; color: #aac8e8; margin-top: 1px; }
+  .badges { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
   .badge {
-    display: flex; align-items: center; gap: 5px;
-    padding: 5px 12px; border-radius: 20px;
-    font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 4px;
+    padding: 4px 9px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.03em;
   }
   .badge-online  { background: #00cc66; color: #fff; }
   .badge-offline { background: #cc2244; color: #fff; }
   .badge-simu    { background: #0088cc; color: #fff; }
   .badge-live    { background: #cc8800; color: #fff; }
-  .badge-home    { background: #00aa55; color: #fff; }
-  .badge-away    { background: #cc8800; color: #fff; }
-  .badge-leak-ok     { background: #00aa55; color: #fff; }
-  .badge-leak-small  { background: #cc8800; color: #fff; }
-  .badge-leak-medium { background: #cc5500; color: #fff; }
-  .badge-leak-large  { background: #cc2244; color: #fff; animation: pulse 1s infinite; }
-  .badge-leak-sos    { background: #cc2244; color: #fff; animation: pulse 0.5s infinite; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: white; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: white; }
   .dot-green { animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .logout-link {
+    font-size: 11px; color: #aac8e8; text-decoration: underline;
+    cursor: pointer; margin-left: 4px;
+  }
 
-  /* ── Panels ── */
+  /* ── Leak Status Bar ── */
+  .leak-status-bar {
+    border-radius: 8px; padding: 6px 12px;
+    font-size: 13px; font-weight: 700;
+    text-align: center; color: #fff;
+    transition: background 0.3s;
+  }
+  .lsb-ok     { background: #00aa55; }
+  .lsb-small  { background: #cc8800; }
+  .lsb-medium { background: #cc5500; }
+  .lsb-large  { background: #cc2244; animation: blink 1s infinite; }
+  .lsb-sos    { background: #cc2244; animation: blink 0.5s infinite; }
+
+  /* ── Leak Alert ── */
+  .leak-alert {
+    display: none; align-items: center; gap: 8px;
+    padding: 8px 12px; background: #fde0e6; border: 2px solid #cc2244;
+    border-radius: 8px; font-size: 14px; font-weight: 700; color: #cc2244;
+    animation: blink 1s infinite;
+  }
+  .leak-alert.show { display: flex; }
+  @keyframes blink { 0%,100%{border-color:#cc2244} 50%{border-color:#ff6688} }
+
+  /* ── Main Grid ── */
   .panel {
-    background: #ffffff;
-    border: 2px solid #c0ccd8;
-    border-radius: 12px;
-    padding: 10px 14px;
+    background: #fff; border: 1.5px solid #c0ccd8; border-radius: 10px; padding: 8px 10px;
   }
   .panel-label {
-    font-size: 13px; font-weight: 700;
-    color: #4a6a88; letter-spacing: 0.1em;
-    text-transform: uppercase; margin-bottom: 8px;
-    border-bottom: 2px solid #e0e8f0;
-    padding-bottom: 5px;
+    font-size: 11px; font-weight: 700; color: #4a6a88; letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 6px;
+    border-bottom: 1.5px solid #e0e8f0; padding-bottom: 4px;
   }
-  .panel-status-badge { margin-bottom: 10px; align-self: flex-start; }
 
-  /* ── Metrics ── */
-  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  /* ── Metrics 3-col ── */
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
   .metric {
-    background: #f0f5fa;
-    border: 2px solid #c0d0e0;
-    border-radius: 10px; padding: 10px 8px;
-    text-align: center;
+    background: #f0f5fa; border: 1.5px solid #c0d0e0;
+    border-radius: 8px; padding: 7px 4px; text-align: center;
   }
-  .metric-lbl { font-size: 13px; font-weight: 700; color: #4a6a88; margin-bottom: 4px; }
-  .metric-val { font-size: 24px; font-weight: 700; color: #1a2a3a; line-height: 1.2; }
-  .metric-unit { font-size: 14px; color: #0088cc; margin-left: 2px; }
-  .metric.flow { border-color: #00aaaa; background: #eafafa; }
+  .metric-lbl { font-size: 11px; font-weight: 700; color: #4a6a88; margin-bottom: 2px; }
+  .metric-val { font-size: 20px; font-weight: 700; color: #1a2a3a; line-height: 1.2; }
+  .metric-unit { font-size: 12px; color: #0088cc; margin-left: 1px; }
+  .metric-sub  { font-size: 10px; color: #007788; margin-top: 2px; }
+  .metric.flow    { border-color: #00aaaa; background: #eafafa; }
   .metric.flow .metric-lbl { color: #007788; }
   .metric.flow-out { border-color: #cc8800; background: #fff6e6; }
   .metric.flow-out .metric-lbl { color: #996600; }
@@ -101,26 +106,32 @@
     50%     { border-color: #ff6688; background: #ffe8ec; }
   }
 
-  /* ── Consumption ── */
-  .cons-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 4px; border-bottom: 1px solid #e0e8f0;
+  /* ── Consumption 3-col ── */
+  .cons-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+  .cons-cell {
+    text-align: center; background: #f0f5fa;
+    border: 1.5px solid #c0d0e0; border-radius: 8px; padding: 7px 4px;
   }
-  .cons-row:last-child { border-bottom: none; }
-  .cons-lbl { font-size: 17px; font-weight: 600; color: #4a6a88; }
-  .cons-val { font-size: 22px; font-weight: 700; color: #1a2a3a; }
-  .cons-unit { font-size: 14px; color: #0088cc; margin-left: 3px; }
+  .cons-lbl { font-size: 11px; font-weight: 700; color: #4a6a88; margin-bottom: 2px; }
+  .cons-val { font-size: 18px; font-weight: 700; color: #1a2a3a; }
+  .cons-unit { font-size: 11px; color: #0088cc; margin-left: 2px; }
 
-  /* ── Buttons ── */
-  .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  /* ── Mode + Valve combined ── */
+  .mv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .mv-row { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
+  .mv-row:last-child { margin-bottom: 0; }
+  .mv-label { font-size: 12px; font-weight: 700; color: #4a6a88; min-width: 48px; }
+  .mode-badge {
+    flex: 1; text-align: center; padding: 5px 8px; border-radius: 20px;
+    font-size: 12px; font-weight: 700;
+  }
+  .badge-home { background: #00aa55; color: #fff; }
+  .badge-away { background: #cc8800; color: #fff; }
   .btn {
-    padding: 14px 8px; border-radius: 10px;
-    border: 2px solid #c0ccd8;
-    background: #f0f5fa;
-    color: #4a6a88;
-    font-size: 18px; font-weight: 700;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
+    flex: 1; padding: 10px 4px; border-radius: 8px;
+    border: 1.5px solid #c0ccd8; background: #f0f5fa; color: #4a6a88;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
     transition: all 0.15s;
   }
   .btn:active { transform: scale(0.96); }
@@ -129,28 +140,34 @@
   .btn.active-open  { border-color: #0088cc; color: #005599; background: #ddf0ff; }
   .btn.active-close { border-color: #cc2244; color: #991133; background: #fde0e6; }
 
-  /* ── Leak alert ── */
-  .leak-alert {
-    display: none; align-items: center; gap: 10px;
-    padding: 10px 14px;
-    background: #fde0e6; border: 2px solid #cc2244;
-    border-radius: 10px;
-    font-size: 16px; font-weight: 700; color: #cc2244;
-    animation: blink 1s infinite;
+  /* ── Expandable ── */
+  .expand-header {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; padding: 8px 10px;
+    background: #fff; border: 1.5px solid #c0ccd8; border-radius: 10px;
+    font-size: 13px; font-weight: 700; color: #4a6a88;
   }
-  .leak-alert.show { display: flex; }
-  @keyframes blink { 0%,100%{border-color:#cc2244} 50%{border-color:#ff6688} }
+  .expand-header:active { background: #f0f5fa; }
+  .expand-arrow { font-size: 12px; transition: transform 0.2s; }
+  .expand-arrow.open { transform: rotate(180deg); }
+  .expand-content {
+    display: none; flex-direction: column; gap: 5px;
+    background: #fff; border: 1.5px solid #c0ccd8;
+    border-top: none; border-radius: 0 0 10px 10px;
+    padding: 8px 10px;
+  }
+  .expand-content.open { display: flex; }
 
   /* ── Log ── */
   .log-box {
     background: #f8fafc; border: 1px solid #c0ccd8;
-    border-radius: 8px; padding: 8px 10px;
-    height: 90px; overflow-y: auto;
-    font-family: monospace; font-size: 13px;
-    display: flex; flex-direction: column; gap: 3px;
+    border-radius: 6px; padding: 6px 8px;
+    height: 160px; overflow-y: auto;
+    font-family: monospace; font-size: 12px;
+    display: flex; flex-direction: column; gap: 2px;
   }
-  .log-entry { display: flex; gap: 8px; line-height: 1.5; }
-  .log-ts   { color: #8aaacc; min-width: 58px; flex-shrink: 0; }
+  .log-entry { display: flex; gap: 6px; line-height: 1.4; }
+  .log-ts   { color: #8aaacc; min-width: 54px; flex-shrink: 0; }
   .log-ok   { color: #007733; font-weight: 600; }
   .log-warn { color: #996600; font-weight: 600; }
   .log-info { color: #005599; }
@@ -158,42 +175,30 @@
 
   /* ── Login screen ── */
   .login-screen {
-    position: fixed; inset: 0;
-    background: #1a3a5c;
+    position: fixed; inset: 0; background: #1a3a5c;
     display: flex; align-items: center; justify-content: center;
-    z-index: 1000;
-    padding: 20px;
+    z-index: 1000; padding: 20px;
   }
   .login-box {
-    background: #ffffff; border-radius: 14px; padding: 28px 24px;
+    background: #fff; border-radius: 14px; padding: 28px 24px;
     width: 100%; max-width: 320px;
     display: flex; flex-direction: column; gap: 12px;
   }
-  .login-title {
-    font-size: 22px; font-weight: 700; color: #1a3a5c;
-    text-align: center; margin-bottom: 6px;
-  }
+  .login-title { font-size: 22px; font-weight: 700; color: #1a3a5c; text-align: center; margin-bottom: 6px; }
   .login-box input {
     padding: 12px 14px; border-radius: 8px; border: 2px solid #c0ccd8;
     font-size: 16px; font-family: Arial, sans-serif;
   }
   .login-box button {
     padding: 12px; border-radius: 8px; border: none;
-    background: #0088cc; color: #fff; font-size: 16px; font-weight: 700;
-    cursor: pointer;
+    background: #0088cc; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
   }
-  .login-box button:active { transform: scale(0.97); }
   .login-error { color: #cc2244; font-size: 13px; text-align: center; min-height: 16px; }
-  .logout-link {
-    font-size: 11px; color: #aac8e8; text-decoration: underline;
-    cursor: pointer; margin-top: 2px; text-align: right;
-  }
 </style>
 </head>
 <body>
 
 <script>
-  // TODO: Αντικατάστησε με το ΔΙΚΟ ΣΟΥ firebaseConfig από Project Settings → General → Your apps
   const firebaseConfig = {
     apiKey: "AIzaSyD3DYCqG4kN2m-4EFVj3zQI5gtHHRI2BTc",
     authDomain: "project-water-v5.firebaseapp.com",
@@ -203,24 +208,23 @@
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db   = firebase.database();
-
-  const BOT_TOKEN    = "8772807332:AAF3RHE35Mc8q6omQjD6WjroB5d6XqfjXCA";
-  const CHAT_ID      = "8818001527";
-  const OFFLINE_SEC  = 15;  // 3 × 5s updates — μετά από αυτό θεωρείται OFFLINE
+  const BOT_TOKEN   = "8772807332:AAF3RHE35Mc8q6omQjD6WjroB5d6XqfjXCA";
+  const CHAT_ID     = "8818001527";
+  const OFFLINE_SEC = 15;
 </script>
 
-<!-- Login screen -->
+<!-- Login -->
 <div class="login-screen" id="login-screen">
   <div class="login-box">
     <div class="login-title">💧 Water Monitor</div>
-    <input type="email"    id="login-email"    placeholder="Email"    autocomplete="username">
+    <input type="email"    id="login-email"    placeholder="Email" autocomplete="username">
     <input type="password" id="login-password" placeholder="Κωδικός" autocomplete="current-password">
-    <button id="login-btn" onclick="doLogin()">Σύνδεση</button>
+    <button onclick="doLogin()">Σύνδεση</button>
     <div class="login-error" id="login-error"></div>
   </div>
 </div>
 
-<div id="app-content" style="display:none; flex-direction:column; gap:7px;">
+<div id="app-content" style="display:none; flex-direction:column; gap:5px;">
 
 <!-- Header -->
 <div class="header">
@@ -239,25 +243,22 @@
     <div class="badge badge-simu" id="mode-badge">
       <span id="mode-txt">...</span>
     </div>
-    <span class="logout-link" onclick="doLogout()">🚪 Έξοδος</span>
+    <span class="logout-link" onclick="doLogout()">🚪</span>
   </div>
 </div>
 
 <!-- Leak Status Bar -->
-<div class="badge badge-leak-ok" id="leak-badge"
-     style="align-self:stretch; border-radius:10px; padding:8px 14px; justify-content:center; font-size:14px;">
-  <span id="leak-badge-txt">💧 Σύστημα ΟΚ</span>
-</div>
+<div class="leak-status-bar lsb-ok" id="leak-status-bar">💧 Σύστημα ΟΚ</div>
 
-<!-- Leak alert -->
+<!-- Leak Alert -->
 <div class="leak-alert" id="leak-alert">
   <div>
-    <div id="leak-alert-title">⚠️ Διαρροή εκτός σπιτιού! Βάνα αυτόματα OFF.</div>
-    <div id="leak-alert-detail" style="font-size:13px; margin-top:4px; font-weight:400;"></div>
+    <div id="leak-alert-title"></div>
+    <div id="leak-alert-detail" style="font-size:12px; margin-top:3px; font-weight:400;"></div>
   </div>
 </div>
 
-<!-- Live readings -->
+<!-- Live Readings -->
 <div class="panel">
   <div class="panel-label">📡 Live Readings</div>
   <div class="metrics-grid">
@@ -272,70 +273,67 @@
     <div class="metric flow">
       <div class="metric-lbl">FLOW</div>
       <div class="metric-val" id="val-flow">--<span class="metric-unit">L</span></div>
-      <div style="font-size:11px; color:#007788; margin-top:3px;" id="val-contmin"></div>
+      <div class="metric-sub" id="val-contmin"></div>
     </div>
-    <div class="metric flow-out" id="flowout-card">
-      <div class="metric-lbl">FLOW OUT</div>
-      <div class="metric-val" id="val-flowout">--<span class="metric-unit">L</span></div>
-    </div>
+  </div>
+  <!-- FlowOut ξεχωριστά κάτω -->
+  <div id="flowout-card" class="metric flow-out" style="margin-top:5px;">
+    <div class="metric-lbl">FLOW OUT</div>
+    <div class="metric-val" id="val-flowout">--<span class="metric-unit">L</span></div>
   </div>
 </div>
 
 <!-- Consumption -->
 <div class="panel">
   <div class="panel-label">💧 Consumption</div>
-  <div class="cons-row">
-    <span class="cons-lbl">TODAY</span>
-    <span class="cons-val" id="val-daily">0<span class="cons-unit">L</span></span>
-  </div>
-  <div class="cons-row">
-    <span class="cons-lbl">MONTH</span>
-    <span class="cons-val" id="val-mtd">0<span class="cons-unit">L</span></span>
-  </div>
-  <div class="cons-row">
-    <span class="cons-lbl">YEAR</span>
-    <span class="cons-val" id="val-ytd">0<span class="cons-unit">L</span></span>
-  </div>
-</div>
-
-<!-- Mode -->
-<div class="panel">
-  <div class="panel-label">🏠 Mode</div>
-  <div class="badge panel-status-badge" id="mode-status-badge">
-    <span id="mode-status-txt">...</span>
-  </div>
-  <div class="btn-grid">
-    <button class="btn" id="btn-home" onclick="sendCmd('/mode_home')">🏠 HOME</button>
-    <button class="btn" id="btn-out"  onclick="sendCmd('/mode_out')">🚶 AWAY</button>
-  </div>
-</div>
-
-<!-- Valve -->
-<div class="panel">
-  <div class="panel-label">🔧 Valve</div>
-  <div class="btn-grid">
-    <button class="btn" id="btn-open"  onclick="sendCmd('/open')">🔓 OPEN</button>
-    <button class="btn" id="btn-close" onclick="sendCmd('/close')">🔒 CLOSE</button>
-  </div>
-</div>
-
-<!-- Calibration -->
-<div class="panel">
-  <div class="panel-label">⚙️ Calibration</div>
-  <div class="cons-row">
-    <span class="cons-lbl" style="font-size:14px;">L/pulse</span>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <input type="text" id="cal-input" 
-             style="width:100px;padding:6px 8px;border:2px solid #c0ccd8;border-radius:8px;font-size:16px;text-align:center;"
-             placeholder="0.01321">
-      <button class="btn" style="padding:8px 14px;font-size:14px;" onclick="saveCalibration()">💾</button>
+  <div class="cons-grid">
+    <div class="cons-cell">
+      <div class="cons-lbl">TODAY</div>
+      <div class="cons-val" id="val-daily">0<span class="cons-unit">L</span></div>
+    </div>
+    <div class="cons-cell">
+      <div class="cons-lbl">MONTH</div>
+      <div class="cons-val" id="val-mtd">0<span class="cons-unit">L</span></div>
+    </div>
+    <div class="cons-cell">
+      <div class="cons-lbl">YEAR</div>
+      <div class="cons-val" id="val-ytd">0<span class="cons-unit">L</span></div>
     </div>
   </div>
 </div>
 
-<!-- Log -->
+<!-- Mode + Valve -->
 <div class="panel">
-  <div class="panel-label">📋 Log</div>
+  <div class="mv-row">
+    <span class="mv-label">🏠 Mode</span>
+    <div class="mode-badge badge-home" id="mode-status-badge">
+      <span id="mode-status-txt">ΣΤΟ ΣΠΙΤΙ</span>
+    </div>
+    <button class="btn" id="btn-home" onclick="sendCmd('/mode_home')">🏠</button>
+    <button class="btn" id="btn-out"  onclick="sendCmd('/mode_out')">🚶</button>
+  </div>
+  <div class="mv-row">
+    <span class="mv-label">🔧 Valve</span>
+    <button class="btn" id="btn-open"  onclick="sendCmd('/open')" style="flex:2;">🔓 OPEN</button>
+    <button class="btn" id="btn-close" onclick="sendCmd('/close')" style="flex:2;">🔒 CLOSE</button>
+  </div>
+</div>
+
+<!-- Expandable: Ρυθμίσεις & Log -->
+<div class="expand-header" onclick="toggleExpand()">
+  <span>⚙️ Ρυθμίσεις &amp; Log</span>
+  <span class="expand-arrow" id="expand-arrow">▼</span>
+</div>
+<div class="expand-content" id="expand-content">
+  <!-- Calibration -->
+  <div style="display:flex; align-items:center; gap:8px;">
+    <span style="font-size:12px; font-weight:700; color:#4a6a88;">L/pulse</span>
+    <input type="text" id="cal-input"
+           style="flex:1; padding:6px 8px; border:1.5px solid #c0ccd8; border-radius:8px; font-size:14px;"
+           placeholder="0.01321">
+    <button class="btn" style="flex:0; padding:6px 12px; font-size:13px;" onclick="saveCalibration()">💾</button>
+  </div>
+  <!-- Log -->
   <div class="log-box" id="log-box">
     <div class="log-entry">
       <span class="log-ts">--:--:--</span>
@@ -347,6 +345,14 @@
 </div><!-- /app-content -->
 
 <script>
+function toggleExpand() {
+  const content = document.getElementById('expand-content');
+  const arrow   = document.getElementById('expand-arrow');
+  const isOpen  = content.classList.contains('open');
+  content.classList.toggle('open', !isOpen);
+  arrow.classList.toggle('open', !isOpen);
+}
+
 function ts() { return new Date().toLocaleTimeString('el-GR',{hour12:false}); }
 function addLog(msg, type='info') {
   const box = document.getElementById('log-box');
@@ -371,127 +377,75 @@ async function tgSend(text) {
   catch(e) { addLog('Telegram error','err'); }
 }
 
-// Valve: ο ESP32 πρέπει να κινήσει κάτι φυσικό -> περιμένουμε επιβεβαίωση (valve_mob).
-// Mode: είναι αμιγώς software state, δεν χρειάζεται επιβεβαίωση από τον ESP32 -> instant.
 async function sendCmd(cmd) {
   addLog('CMD: ' + cmd, 'info');
   await tgSend(cmd);
-
-  if (cmd === '/open') {
-    await fbSet('/system/valve_mob', 'Open');
-    addLog('⏳ Περιμένετε... ενημερώνω βάνα', 'warn');
-  }
-  if (cmd === '/close') {
-    await fbSet('/system/valve_mob', 'Close');
-    addLog('⏳ Περιμένετε... ενημερώνω βάνα', 'warn');
-  }
-  if (cmd === '/mode_home') {
-    await fbSet('/system/state_stable', 'Home');
-    addLog('✅ Mode: ΣΤΟ ΣΠΙΤΙ', 'ok');
-  }
-  if (cmd === '/mode_out') {
-    await fbSet('/system/state_stable', 'Out');
-    addLog('✅ Mode: ΕΚΤΟΣ ΣΠΙΤΙΟΥ', 'ok');
-  }
+  if (cmd === '/open')      { await fbSet('/system/valve_mob', 'Open');  addLog('⏳ Ενημερώνω βάνα...', 'warn'); }
+  if (cmd === '/close')     { await fbSet('/system/valve_mob', 'Close'); addLog('⏳ Ενημερώνω βάνα...', 'warn'); }
+  if (cmd === '/mode_home') { await fbSet('/system/state_stable', 'Home'); addLog('✅ Mode: ΣΤΟ ΣΠΙΤΙ', 'ok'); }
+  if (cmd === '/mode_out')  { await fbSet('/system/state_stable', 'Out');  addLog('✅ Mode: ΕΚΤΟΣ ΣΠΙΤΙΟΥ', 'ok'); }
 }
 
 async function saveCalibration() {
-  let val = document.getElementById('cal-input').value.trim();
-  // Αποδέχεται κόμμα ή τελεία ως δεκαδικό διαχωριστικό
-  val = val.replace(',', '.');
+  let val = document.getElementById('cal-input').value.trim().replace(',', '.');
   const num = parseFloat(val);
-  if (isNaN(num) || num <= 0 || num > 1) {
-    addLog('❌ Μη έγκυρη τιμή — π.χ. 0.01321', 'err');
-    return;
-  }
+  if (isNaN(num) || num <= 0 || num > 1) { addLog('❌ Μη έγκυρη τιμή', 'err'); return; }
   await fbSet('/system/liters_per_pulse', num);
-  addLog('✅ Calibration: ' + num.toFixed(5) + ' L/pulse αποθηκεύτηκε', 'ok');
+  addLog('✅ Calibration: ' + num.toFixed(5), 'ok');
 }
 
-let lastKnownUpdateVal = 0;   // τιμή last_update που είδαμε τελευταία
-let lastSeenAt        = 0;   // JS ms όταν είδαμε αλλαγή στο last_update
-let wasOnline         = null; // null=άγνωστο, true/false για state-change logging
-let lastCmdV          = '';
-let lastEventTs       = 0;
-let leakActive        = false;  // true μέχρι ο χρήστης να ανοίξει τη βάνα
+let lastKnownUpdateVal = 0;
+let lastSeenAt   = 0;
+let wasOnline    = null;
+let lastCmdV     = '';
+let lastEventTs  = 0;
+let leakActive   = false;
 
 function updateUI(data) {
   if (!data) return;
+
   setHTML('val-flow',    `${data.flow??'--'}<span class="metric-unit">L</span>`);
   setHTML('val-flowout', `${data.counter_out??'--'}<span class="metric-unit">L</span>`);
+  setHTML('val-daily',   `${data.daily??0}<span class="cons-unit">L</span>`);
+  setHTML('val-mtd',     `${data.mtd??0}<span class="cons-unit">L</span>`);
+  setHTML('val-ytd',     `${data.ytd??0}<span class="cons-unit">L</span>`);
+  setHTML('val-temp',    `${data.temp??'--'}<span class="metric-unit">°C</span>`);
+  setHTML('val-hum',     `${data.hum??'--'}<span class="metric-unit">%</span>`);
 
-  // Continuous flow ένδειξη
+  // Continuous flow
   const contMin = data.continuous_min || 0;
-  document.getElementById('val-contmin').textContent =
-    contMin > 0 ? `συνεχής: ${contMin} λεπτά` : '';
+  document.getElementById('val-contmin').textContent = contMin > 0 ? `${contMin} λεπτά` : '';
 
-  // ── Leak Status Badge ─────────────────────────────────────────
-  const leakStatus = data.leak_status || 'OK';
-  const leakLpm    = data.leak_lpm    || 0;
-  const leakBadge  = document.getElementById('leak-badge');
-  const leakBadgeTxt = document.getElementById('leak-badge-txt');
-  const leakClasses = {
-    'OK'     : 'badge badge-leak-ok',
-    'ΜΙΚΡΗ'  : 'badge badge-leak-small',
-    'ΜΕΤΡΙΑ' : 'badge badge-leak-medium',
-    'ΜΕΓΑΛΗ' : 'badge badge-leak-large',
-    'SOS'    : 'badge badge-leak-sos'
-  };
-  leakBadge.className = leakClasses[leakStatus] || 'badge badge-leak-ok';
-  leakBadgeTxt.textContent = leakStatus === 'OK'
-    ? '💧 ΟΚ'
-    : `⚠️ ${leakStatus} ${leakLpm.toFixed(2)}L/min`;
-  setHTML('val-daily', `${data.daily??0}<span class="cons-unit">L</span>`);
-  setHTML('val-mtd',   `${data.mtd??0}<span class="cons-unit">L</span>`);
-  setHTML('val-ytd',   `${data.ytd??0}<span class="cons-unit">L</span>`);
-  setHTML('val-temp',  `${data.temp??'--'}<span class="metric-unit">°C</span>`);
-  setHTML('val-hum',   `${data.hum??'--'}<span class="metric-unit">%</span>`);
-
-  // Εμφάνιση τρέχοντος συντελεστή calibration στο input field
+  // Calibration placeholder
   if (data.liters_per_pulse) {
-    const calInput = document.getElementById('cal-input');
-    if (calInput && calInput !== document.activeElement) {
-      calInput.placeholder = data.liters_per_pulse.toFixed(5);
-    }
+    const ci = document.getElementById('cal-input');
+    if (ci && ci !== document.activeElement) ci.placeholder = data.liters_per_pulse.toFixed(5);
   }
 
   const mode  = data.state_stable || 'Home';
   const valve = data.valve_stable || 'Open';
   const cmdV  = data.valve_mob    || '';
 
-  document.getElementById('btn-home').className  = 'btn'+(mode==='Home' ?' active-home' :'');
-  document.getElementById('btn-out').className   = 'btn'+(mode==='Out'  ?' active-out'  :'');
-  document.getElementById('btn-open').className  = 'btn'+(valve==='Open' ?' active-open' :'');
-  document.getElementById('btn-close').className = 'btn'+(valve==='Close'?' active-close':'');
+  document.getElementById('btn-home').className  = 'btn'+(mode==='Home'  ? ' active-home'  : '');
+  document.getElementById('btn-out').className   = 'btn'+(mode==='Out'   ? ' active-out'   : '');
+  document.getElementById('btn-open').className  = 'btn'+(valve==='Open' ? ' active-open'  : '');
+  document.getElementById('btn-close').className = 'btn'+(valve==='Close'? ' active-close' : '');
 
-  // Status badge mode
   document.getElementById('mode-status-badge').className =
-    'badge panel-status-badge ' + (mode==='Out' ? 'badge-away' : 'badge-home');
+    'mode-badge ' + (mode==='Out' ? 'badge-away' : 'badge-home');
   document.getElementById('mode-status-txt').textContent =
     mode==='Out' ? 'ΕΚΤΟΣ ΣΠΙΤΙΟΥ' : 'ΣΤΟ ΣΠΙΤΙ';
 
-  // ── ONLINE/OFFLINE: βασισμένο στο ΠΟΤΕ είδαμε αλλαγή, όχι σε absolute timestamp ──
-  // Δεν εξαρτόμαστε από epoch· αν το last_update άλλαξε τιμή → ESP32 είναι ζωντανός.
+  // ONLINE/OFFLINE
   const curUpdateVal = data.last_update || 0;
-  if (curUpdateVal !== lastKnownUpdateVal) {
-    lastKnownUpdateVal = curUpdateVal;
-    lastSeenAt = Date.now();
-  }
+  if (curUpdateVal !== lastKnownUpdateVal) { lastKnownUpdateVal = curUpdateVal; lastSeenAt = Date.now(); }
   const msSince  = lastSeenAt > 0 ? Date.now() - lastSeenAt : Infinity;
   const isOnline = lastSeenAt > 0 && msSince < OFFLINE_SEC * 1000;
-
   document.getElementById('status-badge').className = 'badge '+(isOnline?'badge-online':'badge-offline');
   document.getElementById('status-dot').className   = 'dot'+(isOnline?' dot-green':'');
   document.getElementById('status-txt').textContent = isOnline ? 'ONLINE' : 'OFFLINE';
-
-  // Ώρα: από last_update_local που στέλνει ο ESP32 ("2026-06-18 13:17:24" → "13:17:24")
-  const timeStr = data.last_update_local
-    ? data.last_update_local.split(' ')[1]
-    : '--:--:--';
-  document.getElementById('last-seen').textContent =
-    isOnline ? `updated: ${timeStr}` : `last seen: ${timeStr}`;
-
-  // Log μόνο όταν αλλάζει κατάσταση (όχι κάθε 5s)
+  const timeStr = data.last_update_local ? data.last_update_local.split(' ')[1] : '--:--:--';
+  document.getElementById('last-seen').textContent = isOnline ? `updated: ${timeStr}` : `last seen: ${timeStr}`;
   if (isOnline !== wasOnline) {
     wasOnline = isOnline;
     addLog(isOnline ? '🟢 ESP32 ONLINE' : '🔴 ESP32 OFFLINE', isOnline ? 'ok' : 'err');
@@ -501,53 +455,49 @@ function updateUI(data) {
   document.getElementById('mode-badge').className = 'badge '+(sysMode==='LIVE'?'badge-live':'badge-simu');
   document.getElementById('mode-txt').textContent = sysMode;
 
-  // ── Επιβεβαίωση εντολής βάνας από Dashboard ──
-  if (cmdV === '' && lastCmdV !== '') {
-    addLog('✅ Βάνα επιβεβαιώθηκε → ' + valve, 'ok');
-  }
+  // Valve confirmation
+  if (cmdV === '' && lastCmdV !== '') addLog('✅ Βάνα → ' + valve, 'ok');
   lastCmdV = cmdV;
 
-  // ── last_event: log αυτόματων events (διαρροή, button, dashboard) ──
+  // Events
   const evTs  = data.last_event_ts || 0;
   const evMsg = data.last_event    || '';
   if (evTs !== lastEventTs && evTs !== 0) {
     lastEventTs = evTs;
-    addLog(evMsg, evMsg.includes('⚠️') ? 'warn' : 'ok');
+    addLog(evMsg, evMsg.includes('⚠️') || evMsg.includes('🆘') ? 'warn' : 'ok');
     if (evMsg.includes('ΔΙΑΡΡΟΗ')) leakActive = true;
   }
-
-  // ── Leak alarm ────────────────────────────────────────────────
-  // Επίσης ανάβει αν ανοίξει το κινητό μετά από event διαρροής που ήδη υπάρχει στη DB
   if (mode === 'Out' && valve === 'Close' && evMsg.includes('ΔΙΑΡΡΟΗ')) leakActive = true;
-  // Σβήνει μόνο όταν ο χρήστης ανοίξει ξανά τη βάνα (συνειδητή πράξη)
   if (valve === 'Open') leakActive = false;
-  // ── Leak alarm panel ──────────────────────────────────────────
-  // OUT mode: κλειστή Η/Β + ροή (SOS)
-  // HOME mode: alarm από leak detection
-  let showAlert = false;
-  let alertTitle = '';
-  let alertDetail = '';
 
+  // Leak Status Bar
+  const leakStatus = data.leak_status || 'OK';
+  const leakLpm    = data.leak_lpm    || 0;
+  const lsbClasses = { 'OK':'lsb-ok','ΜΙΚΡΗ':'lsb-small','ΜΕΤΡΙΑ':'lsb-medium','ΜΕΓΑΛΗ':'lsb-large','SOS':'lsb-sos' };
+  const lsb = document.getElementById('leak-status-bar');
+  lsb.className = 'leak-status-bar ' + (lsbClasses[leakStatus] || 'lsb-ok');
+  lsb.textContent = leakStatus === 'OK' ? '💧 Σύστημα ΟΚ'
+    : `⚠️ ${leakStatus} διαρροή — ${leakLpm.toFixed(2)} L/min — ${contMin} λεπτά`;
+
+  // Leak Alert
+  let showAlert = false, alertTitle = '', alertDetail = '';
   if (leakStatus === 'SOS') {
     showAlert = true;
     alertTitle = '🆘 SOS! Ροή με κλειστή Η/Β!';
-    alertDetail = 'Πιθανή βλάβη Η/Β ή διαρροή ΠΡΙΝ τη βάνα. Έλεγξε άμεσα!';
+    alertDetail = 'Πιθανή βλάβη Η/Β ή διαρροή ΠΡΙΝ τη βάνα!';
   } else if (['ΜΙΚΡΗ','ΜΕΤΡΙΑ','ΜΕΓΑΛΗ'].includes(leakStatus)) {
     showAlert = true;
     alertTitle = `⚠️ Πιθανή ${leakStatus} διαρροή HOME!`;
-    alertDetail = `Ροή: ${leakLpm.toFixed(2)} L/min επί ${contMin} λεπτά`;
+    alertDetail = `${leakLpm.toFixed(2)} L/min επί ${contMin} λεπτά`;
   } else if (mode === 'Out' && leakActive) {
     showAlert = true;
-    alertTitle = '⚠️ Διαρροή εκτός σπιτιού! Βάνα αυτόματα OFF.';
-    alertDetail = '';
+    alertTitle = '⚠️ Διαρροή εκτός σπιτιού! Βάνα OFF.';
   }
-
   document.getElementById('leak-alert').className = showAlert ? 'leak-alert show' : 'leak-alert';
   document.getElementById('leak-alert-title').textContent  = alertTitle;
   document.getElementById('leak-alert-detail').textContent = alertDetail;
 
-  // FLOW OUT card: κόκκινο + blink όταν η τιμή ξεπεράσει τα 5L — απευθείας
-  // από τον αριθμό, ανεξάρτητα από mode/event. Στο 0 γυρίζει σομόν, χωρίς blink.
+  // FlowOut card color
   const flowOutVal = parseFloat(data.counter_out) || 0;
   document.getElementById('flowout-card').className =
     'metric flow-out' + (flowOutVal >= 5 ? ' alert' : '');
@@ -555,9 +505,8 @@ function updateUI(data) {
 
 async function poll() {
   const data = await fbGet();
-  if (data) {
-    updateUI(data);
-  } else {
+  if (data) { updateUI(data); }
+  else {
     if (wasOnline !== false) {
       wasOnline = false;
       document.getElementById('status-badge').className = 'badge badge-offline';
@@ -571,12 +520,10 @@ async function poll() {
 if (window.Telegram?.WebApp) {
   window.Telegram.WebApp.ready();
   window.Telegram.WebApp.expand();
-  // Force light background
   document.body.style.background = '#e8edf2';
   document.documentElement.style.background = '#e8edf2';
 }
 
-// ── Auth: login/logout, η εφαρμογή ξεκινά ΜΟΝΟ μετά από επιτυχή σύνδεση ──
 let pollStarted = false;
 
 function doLogin() {
@@ -588,9 +535,7 @@ function doLogin() {
   });
 }
 
-function doLogout() {
-  auth.signOut();
-}
+function doLogout() { auth.signOut(); }
 
 auth.onAuthStateChanged(user => {
   if (user) {
