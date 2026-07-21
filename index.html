@@ -49,6 +49,11 @@
   .badge-live    { background: #cc8800; color: #fff; }
   .badge-home    { background: #00aa55; color: #fff; }
   .badge-away    { background: #cc8800; color: #fff; }
+  .badge-leak-ok     { background: #00aa55; color: #fff; }
+  .badge-leak-small  { background: #cc8800; color: #fff; }
+  .badge-leak-medium { background: #cc5500; color: #fff; }
+  .badge-leak-large  { background: #cc2244; color: #fff; animation: pulse 1s infinite; }
+  .badge-leak-sos    { background: #cc2244; color: #fff; animation: pulse 0.5s infinite; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: white; }
   .dot-green { animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
@@ -234,12 +239,20 @@
     <div class="badge badge-simu" id="mode-badge">
       <span id="mode-txt">...</span>
     </div>
+    <div class="badge badge-leak-ok" id="leak-badge">
+      <span id="leak-badge-txt">💧 ΟΚ</span>
+    </div>
     <span class="logout-link" onclick="doLogout()">🚪 Έξοδος</span>
   </div>
 </div>
 
 <!-- Leak alert -->
-<div class="leak-alert" id="leak-alert">⚠️ Διαρροή εκτός σπιτιού! Βάνα αυτόματα OFF.</div>
+<div class="leak-alert" id="leak-alert">
+  <div>
+    <div id="leak-alert-title">⚠️ Διαρροή εκτός σπιτιού! Βάνα αυτόματα OFF.</div>
+    <div id="leak-alert-detail" style="font-size:13px; margin-top:4px; font-weight:400;"></div>
+  </div>
+</div>
 
 <!-- Live readings -->
 <div class="panel">
@@ -256,6 +269,7 @@
     <div class="metric flow">
       <div class="metric-lbl">FLOW</div>
       <div class="metric-val" id="val-flow">--<span class="metric-unit">L</span></div>
+      <div style="font-size:11px; color:#007788; margin-top:3px;" id="val-contmin"></div>
     </div>
     <div class="metric flow-out" id="flowout-card">
       <div class="metric-lbl">FLOW OUT</div>
@@ -402,6 +416,28 @@ function updateUI(data) {
   if (!data) return;
   setHTML('val-flow',    `${data.flow??'--'}<span class="metric-unit">L</span>`);
   setHTML('val-flowout', `${data.counter_out??'--'}<span class="metric-unit">L</span>`);
+
+  // Continuous flow ένδειξη
+  const contMin = data.continuous_min || 0;
+  document.getElementById('val-contmin').textContent =
+    contMin > 0 ? `συνεχής: ${contMin} λεπτά` : '';
+
+  // ── Leak Status Badge ─────────────────────────────────────────
+  const leakStatus = data.leak_status || 'OK';
+  const leakLpm    = data.leak_lpm    || 0;
+  const leakBadge  = document.getElementById('leak-badge');
+  const leakBadgeTxt = document.getElementById('leak-badge-txt');
+  const leakClasses = {
+    'OK'     : 'badge badge-leak-ok',
+    'ΜΙΚΡΗ'  : 'badge badge-leak-small',
+    'ΜΕΤΡΙΑ' : 'badge badge-leak-medium',
+    'ΜΕΓΑΛΗ' : 'badge badge-leak-large',
+    'SOS'    : 'badge badge-leak-sos'
+  };
+  leakBadge.className = leakClasses[leakStatus] || 'badge badge-leak-ok';
+  leakBadgeTxt.textContent = leakStatus === 'OK'
+    ? '💧 ΟΚ'
+    : `⚠️ ${leakStatus} ${leakLpm.toFixed(2)}L/min`;
   setHTML('val-daily', `${data.daily??0}<span class="cons-unit">L</span>`);
   setHTML('val-mtd',   `${data.mtd??0}<span class="cons-unit">L</span>`);
   setHTML('val-ytd',   `${data.ytd??0}<span class="cons-unit">L</span>`);
@@ -482,8 +518,30 @@ function updateUI(data) {
   if (mode === 'Out' && valve === 'Close' && evMsg.includes('ΔΙΑΡΡΟΗ')) leakActive = true;
   // Σβήνει μόνο όταν ο χρήστης ανοίξει ξανά τη βάνα (συνειδητή πράξη)
   if (valve === 'Open') leakActive = false;
-  document.getElementById('leak-alert').className =
-    (mode === 'Out' && leakActive) ? 'leak-alert show' : 'leak-alert';
+  // ── Leak alarm panel ──────────────────────────────────────────
+  // OUT mode: κλειστή Η/Β + ροή (SOS)
+  // HOME mode: alarm από leak detection
+  let showAlert = false;
+  let alertTitle = '';
+  let alertDetail = '';
+
+  if (leakStatus === 'SOS') {
+    showAlert = true;
+    alertTitle = '🆘 SOS! Ροή με κλειστή Η/Β!';
+    alertDetail = 'Πιθανή βλάβη Η/Β ή διαρροή ΠΡΙΝ τη βάνα. Έλεγξε άμεσα!';
+  } else if (['ΜΙΚΡΗ','ΜΕΤΡΙΑ','ΜΕΓΑΛΗ'].includes(leakStatus)) {
+    showAlert = true;
+    alertTitle = `⚠️ Πιθανή ${leakStatus} διαρροή HOME!`;
+    alertDetail = `Ροή: ${leakLpm.toFixed(2)} L/min επί ${contMin} λεπτά`;
+  } else if (mode === 'Out' && leakActive) {
+    showAlert = true;
+    alertTitle = '⚠️ Διαρροή εκτός σπιτιού! Βάνα αυτόματα OFF.';
+    alertDetail = '';
+  }
+
+  document.getElementById('leak-alert').className = showAlert ? 'leak-alert show' : 'leak-alert';
+  document.getElementById('leak-alert-title').textContent  = alertTitle;
+  document.getElementById('leak-alert-detail').textContent = alertDetail;
 
   // FLOW OUT card: κόκκινο + blink όταν η τιμή ξεπεράσει τα 5L — απευθείας
   // από τον αριθμό, ανεξάρτητα από mode/event. Στο 0 γυρίζει σομόν, χωρίς blink.
