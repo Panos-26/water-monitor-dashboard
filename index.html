@@ -334,14 +334,26 @@
       <span style="font-size:12px; font-weight:700; color:#4a6a88; margin-right:8px;">L/pulse</span>
       <span style="width:16px;"></span>
       <span style="width:16px;"></span>
+      <!-- Τρέχουσα τιμή (από Firebase, read-only) -->
+      <span id="cal-display"
+            style="width:75px; padding:4px 6px; border:1.5px solid #c0ccd8; border-radius:8px;
+                   font-size:12px; font-weight:700; color:#1a2a3a; background:#f0f5fa;
+                   display:inline-block; text-align:center;">0.01321</span>
+      <!-- Input για νέα τιμή (κρυμμένο, εμφανίζεται με κλικ) -->
       <input type="text" id="cal-input"
-             style="width:75px; padding:4px 6px; border:1.5px solid #c0ccd8; border-radius:8px;
-                    font-size:12px; font-weight:700; color:#1a2a3a;"
-             placeholder="0.01321">
-      <button onclick="saveCalibration()"
+             style="width:75px; padding:4px 6px; border:1.5px solid #0088cc; border-radius:8px;
+                    font-size:12px; font-weight:700; color:#1a2a3a; display:none;"
+             placeholder="νέα τιμή">
+      <button onclick="editCalibration()"
+              id="cal-edit-btn"
               style="width:28px; height:28px; margin-left:6px; border:1.5px solid #c0ccd8;
                      border-radius:6px; background:#f0f5fa; cursor:pointer; font-size:14px;
-                     display:flex; align-items:center; justify-content:center;">💾</button>
+                     display:flex; align-items:center; justify-content:center;">✏️</button>
+      <button onclick="saveCalibration()"
+              id="cal-save-btn"
+              style="width:28px; height:28px; margin-left:6px; border:1.5px solid #c0ccd8;
+                     border-radius:6px; background:#f0f5fa; cursor:pointer; font-size:14px;
+                     display:none; align-items:center; justify-content:center;">💾</button>
       <!-- υπόλοιπος χώρος κενός για μελλοντικές ρυθμίσεις -->
     </div>
   </div>
@@ -398,11 +410,30 @@ async function sendCmd(cmd) {
   if (cmd === '/mode_out')  { await fbSet('/system/state_stable', 'Out');  addLog('✅ Mode: ΕΚΤΟΣ ΣΠΙΤΙΟΥ', 'ok'); }
 }
 
+function editCalibration() {
+  // Εμφάνιση input + save button, απόκρυψη display + edit button
+  document.getElementById('cal-display').style.display  = 'none';
+  document.getElementById('cal-edit-btn').style.display = 'none';
+  document.getElementById('cal-input').style.display    = 'inline-block';
+  document.getElementById('cal-save-btn').style.display = 'flex';
+  document.getElementById('cal-input').value = '';
+  document.getElementById('cal-input').focus();
+}
+
+function resetCalibrationUI() {
+  // Επαναφορά σε display mode
+  document.getElementById('cal-input').style.display    = 'none';
+  document.getElementById('cal-save-btn').style.display = 'none';
+  document.getElementById('cal-display').style.display  = 'inline-block';
+  document.getElementById('cal-edit-btn').style.display = 'flex';
+}
+
 async function saveCalibration() {
   let val = document.getElementById('cal-input').value.trim().replace(',', '.');
   const num = parseFloat(val);
   if (isNaN(num) || num <= 0 || num > 1) {
     addLog('❌ Μη έγκυρη τιμή — π.χ. 0.01321', 'err');
+    resetCalibrationUI();
     return;
   }
   // Επιβεβαίωση — αποδέχεται Ν (ελληνικό) ή N (αγγλικό)
@@ -410,20 +441,16 @@ async function saveCalibration() {
               'και πρέπει να γίνει μετά από μετρήσεις σε 12 λίτρα δοχείο.\n\n' +
               'Πληκτρολογήστε Ν ή N για αποδοχή, οτιδήποτε άλλο για ακύρωση:';
   const answer = prompt(msg, '');
-  if (!answer) {
-    addLog('❌ Αλλαγή L/pulse ακυρώθηκε', 'warn');
-    return;
-  }
-  // Normalize: ελληνικό Ν → αγγλικό N για σύγκριση
-  const normalized = answer.trim().replace(/Ν/g, 'N').toUpperCase();
+  const normalized = (answer || '').trim().replace(/Ν/g, 'N').toUpperCase();
   if (normalized !== 'N') {
     addLog('❌ Αλλαγή L/pulse ακυρώθηκε', 'warn');
-    document.getElementById('cal-input').value = '';  // επαναφορά από Firebase στο επόμενο poll
+    resetCalibrationUI();
     return;
   }
   // Μόνο εδώ γίνεται η αποθήκευση στο Firebase
   await fbSet('/system/liters_per_pulse', num);
   addLog('✅ Calibration: ' + num.toFixed(5) + ' L/pulse αποθηκεύτηκε', 'ok');
+  resetCalibrationUI();
 }
 
 let lastKnownUpdateVal = 0;
@@ -450,10 +477,8 @@ function updateUI(data) {
 
   // Calibration placeholder
   if (data.liters_per_pulse) {
-    const ci = document.getElementById('cal-input');
-    if (ci && ci !== document.activeElement) {
-      ci.value = data.liters_per_pulse.toFixed(5);
-    }
+    const cd = document.getElementById('cal-display');
+    if (cd) cd.textContent = data.liters_per_pulse.toFixed(5);
   }
 
   const mode  = data.state_stable || 'Home';
