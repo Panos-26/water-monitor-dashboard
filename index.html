@@ -13,11 +13,24 @@
   :root { color-scheme: light only !important; }
   html { filter: none !important; background: #e8edf2 !important; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
+  html, body { height: 100%; min-height: 100dvh; }
   body {
     background: #e8edf2; color: #1a2a3a;
     font-family: Arial, sans-serif;
     padding: 6px; display: flex; flex-direction: column; gap: 5px;
+    min-height: 100dvh; box-sizing: border-box;
+  }
+  #app-content {
+    flex: 1; display: flex; flex-direction: column; gap: 5px; min-height: 0;
+  }
+  /* Log box γεμίζει τον υπόλοιπο χώρο */
+  .expand-content.open { display: flex; flex-direction: column; gap: 5px; flex: 1; min-height: 0; }
+  .log-box {
+    background: #f8fafc; border: 1px solid #c0ccd8;
+    border-radius: 6px; padding: 6px 8px;
+    flex: 1; min-height: 80px; overflow-y: auto;
+    font-family: monospace; font-size: 12px;
+    display: flex; flex-direction: column; gap: 2px;
   }
 
   /* ── Header ── */
@@ -159,13 +172,6 @@
   .expand-content.open { display: flex; }
 
   /* ── Log ── */
-  .log-box {
-    background: #f8fafc; border: 1px solid #c0ccd8;
-    border-radius: 6px; padding: 6px 8px;
-    height: 120px; overflow-y: auto;
-    font-family: monospace; font-size: 12px;
-    display: flex; flex-direction: column; gap: 2px;
-  }
   .log-entry { display: flex; gap: 6px; line-height: 1.4; }
   .log-ts   { color: #8aaacc; min-width: 54px; flex-shrink: 0; }
   .log-ok   { color: #007733; font-weight: 600; }
@@ -503,7 +509,7 @@ function updateUI(data) {
   document.getElementById('status-badge').className = 'badge '+(isOnline?'badge-online':'badge-offline');
   document.getElementById('status-dot').className   = 'dot'+(isOnline?' dot-green':'');
   document.getElementById('status-txt').textContent = isOnline ? 'ONLINE' : 'OFFLINE';
-  const timeStr = data.last_update_local ? data.last_update_local.split(' ')[1] : '--:--:--';
+  const timeStr = data.last_update_local ? data.last_update_local : '--';
   document.getElementById('last-seen').textContent = isOnline ? `updated: ${timeStr}` : `last seen: ${timeStr}`;
   if (isOnline !== wasOnline) {
     wasOnline = isOnline;
