@@ -162,7 +162,7 @@
   .log-box {
     background: #f8fafc; border: 1px solid #c0ccd8;
     border-radius: 6px; padding: 6px 8px;
-    height: 160px; overflow-y: auto;
+    height: 120px; overflow-y: auto;
     font-family: monospace; font-size: 12px;
     display: flex; flex-direction: column; gap: 2px;
   }
@@ -200,7 +200,7 @@
 
 <script>
   const firebaseConfig = {
-    apiKey: "AIzaSyD3DYCqG4kN2m-4EFVj3zQI5gtHHRI2BTc",
+    apiKey: "ΒΑΛΕ_ΤΟ_API_KEY_ΣΟΥ",
     authDomain: "project-water-v5.firebaseapp.com",
     databaseURL: "https://project-water-v5-default-rtdb.firebaseio.com",
     projectId: "project-water-v5"
@@ -322,9 +322,9 @@
 <!-- Expandable: Ρυθμίσεις & Log -->
 <div class="expand-header" onclick="toggleExpand()">
   <span>⚙️ Ρυθμίσεις &amp; Log</span>
-  <span class="expand-arrow" id="expand-arrow">▼</span>
+  <span class="expand-arrow open" id="expand-arrow">▼</span>
 </div>
-<div class="expand-content" id="expand-content">
+<div class="expand-content open" id="expand-content">
   <!-- Calibration -->
   <div style="display:flex; align-items:center; gap:8px;">
     <span style="font-size:12px; font-weight:700; color:#4a6a88;">L/pulse</span>
