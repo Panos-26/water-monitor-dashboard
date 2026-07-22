@@ -405,15 +405,23 @@ async function saveCalibration() {
     addLog('❌ Μη έγκυρη τιμή — π.χ. 0.01321', 'err');
     return;
   }
-  // Επιβεβαίωση αλλαγής κρίσιμης παραμέτρου
+  // Επιβεβαίωση — αποδέχεται Ν (ελληνικό) ή N (αγγλικό)
   const msg = 'Η αλλαγή της παραμέτρου επηρεάζει την ακρίβεια των υπολογισμών\n' +
               'και πρέπει να γίνει μετά από μετρήσεις σε 12 λίτρα δοχείο.\n\n' +
-              'Είστε βέβαιοι για την αλλαγή; (Ν = Ναι / Ο = Όχι)';
-  const answer = prompt(msg, 'Ο');
-  if (!answer || answer.trim().toUpperCase() !== 'Ν') {
+              'Πληκτρολογήστε Ν ή N για αποδοχή, οτιδήποτε άλλο για ακύρωση:';
+  const answer = prompt(msg, '');
+  if (!answer) {
     addLog('❌ Αλλαγή L/pulse ακυρώθηκε', 'warn');
     return;
   }
+  // Normalize: ελληνικό Ν → αγγλικό N για σύγκριση
+  const normalized = answer.trim().replace(/Ν/g, 'N').toUpperCase();
+  if (normalized !== 'N') {
+    addLog('❌ Αλλαγή L/pulse ακυρώθηκε', 'warn');
+    document.getElementById('cal-input').value = '';  // επαναφορά από Firebase στο επόμενο poll
+    return;
+  }
+  // Μόνο εδώ γίνεται η αποθήκευση στο Firebase
   await fbSet('/system/liters_per_pulse', num);
   addLog('✅ Calibration: ' + num.toFixed(5) + ' L/pulse αποθηκεύτηκε', 'ok');
 }
@@ -443,7 +451,9 @@ function updateUI(data) {
   // Calibration placeholder
   if (data.liters_per_pulse) {
     const ci = document.getElementById('cal-input');
-    if (ci && ci !== document.activeElement) ci.placeholder = data.liters_per_pulse.toFixed(5);
+    if (ci && ci !== document.activeElement) {
+      ci.value = data.liters_per_pulse.toFixed(5);
+    }
   }
 
   const mode  = data.state_stable || 'Home';
