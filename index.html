@@ -228,12 +228,12 @@
 
 <!-- Header -->
 <div class="header" style="flex-direction:column; gap:6px; padding:10px 14px;">
-  <!-- Γραμμή 1: εικονίδιο + τίτλος κεντραρισμένα -->
-  <div style="display:flex; align-items:center; justify-content:center; gap:10px; width:100%;">
-    <span style="font-size:28px;">💧</span>
-    <span style="font-size:22px; font-weight:700; color:#fff;">WATER MONITOR</span>
+  <!-- Γραμμή 1: σταγόνα αριστερά + τίτλος κεντραρισμένος -->
+  <div style="display:flex; align-items:center; width:100%;">
+    <span style="font-size:28px; flex-shrink:0;">💧</span>
+    <span style="font-size:18px; font-weight:700; color:#fff; flex:1; text-align:center;">WATER MONITORING SYSTEM</span>
   </div>
-  <!-- Γραμμή 2: OFFLINE + LIVE badges κεντραρισμένα -->
+  <!-- Γραμμή 2: badges κεντραρισμένα -->
   <div style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%;">
     <div class="badge badge-offline" id="status-badge">
       <span class="dot" id="status-dot"></span>
@@ -330,14 +330,19 @@
 <div class="expand-content open" id="expand-content">
   <!-- Calibration -->
   <div style="display:flex; flex-direction:column; gap:6px;">
-    <div style="display:flex; align-items:center; gap:8px;">
-      <span style="font-size:12px; font-weight:700; color:#4a6a88; min-width:60px;">L/pulse</span>
+    <div style="display:flex; align-items:center; width:100%;">
+      <span style="font-size:12px; font-weight:700; color:#4a6a88; margin-right:8px;">L/pulse</span>
+      <span style="width:16px;"></span>
+      <span style="width:16px;"></span>
       <input type="text" id="cal-input"
-             style="width:85px; padding:5px 7px; border:1.5px solid #c0ccd8; border-radius:8px;
-                    font-size:14px; font-weight:700; color:#1a2a3a;"
+             style="width:75px; padding:4px 6px; border:1.5px solid #c0ccd8; border-radius:8px;
+                    font-size:12px; font-weight:700; color:#1a2a3a;"
              placeholder="0.01321">
-      <button class="btn" style="width:40px; padding:5px; font-size:13px;" onclick="saveCalibration()">💾</button>
-      <!-- υπόλοιπο χώρο για μελλοντικές ρυθμίσεις -->
+      <button onclick="saveCalibration()"
+              style="width:28px; height:28px; margin-left:6px; border:1.5px solid #c0ccd8;
+                     border-radius:6px; background:#f0f5fa; cursor:pointer; font-size:14px;
+                     display:flex; align-items:center; justify-content:center;">💾</button>
+      <!-- υπόλοιπος χώρος κενός για μελλοντικές ρυθμίσεις -->
     </div>
   </div>
   <!-- Log -->
@@ -396,9 +401,21 @@ async function sendCmd(cmd) {
 async function saveCalibration() {
   let val = document.getElementById('cal-input').value.trim().replace(',', '.');
   const num = parseFloat(val);
-  if (isNaN(num) || num <= 0 || num > 1) { addLog('❌ Μη έγκυρη τιμή', 'err'); return; }
+  if (isNaN(num) || num <= 0 || num > 1) {
+    addLog('❌ Μη έγκυρη τιμή — π.χ. 0.01321', 'err');
+    return;
+  }
+  // Επιβεβαίωση αλλαγής κρίσιμης παραμέτρου
+  const msg = 'Η αλλαγή της παραμέτρου επηρεάζει την ακρίβεια των υπολογισμών\n' +
+              'και πρέπει να γίνει μετά από μετρήσεις σε 12 λίτρα δοχείο.\n\n' +
+              'Είστε βέβαιοι για την αλλαγή; (Ν = Ναι / Ο = Όχι)';
+  const answer = prompt(msg, 'Ο');
+  if (!answer || answer.trim().toUpperCase() !== 'Ν') {
+    addLog('❌ Αλλαγή L/pulse ακυρώθηκε', 'warn');
+    return;
+  }
   await fbSet('/system/liters_per_pulse', num);
-  addLog('✅ Calibration: ' + num.toFixed(5), 'ok');
+  addLog('✅ Calibration: ' + num.toFixed(5) + ' L/pulse αποθηκεύτηκε', 'ok');
 }
 
 let lastKnownUpdateVal = 0;
