@@ -23,17 +23,17 @@
   /* ── Header ── */
   .header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 7px 12px; background: #1a3a5c; border-radius: 10px; color: white;
+    padding: 10px 14px; background: #1a3a5c; border-radius: 10px; color: white;
   }
-  .header-left { display: flex; align-items: center; gap: 8px; }
-  .header-icon { font-size: 22px; }
-  .header-title { font-size: 18px; font-weight: 700; color: #fff; }
-  .header-sub   { font-size: 11px; color: #aac8e8; margin-top: 1px; }
-  .badges { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-icon { font-size: 28px; }
+  .header-title { font-size: 22px; font-weight: 700; color: #fff; }
+  .header-sub   { font-size: 12px; color: #aac8e8; margin-top: 2px; }
+  .badges { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
   .badge {
-    display: flex; align-items: center; gap: 4px;
-    padding: 4px 9px; border-radius: 20px;
-    font-size: 12px; font-weight: 700; letter-spacing: 0.03em;
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 11px; border-radius: 20px;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.03em;
   }
   .badge-online  { background: #00cc66; color: #fff; }
   .badge-offline { background: #cc2244; color: #fff; }
@@ -43,8 +43,8 @@
   .dot-green { animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .logout-link {
-    font-size: 11px; color: #aac8e8; text-decoration: underline;
-    cursor: pointer; margin-left: 4px;
+    font-size: 13px; color: #aac8e8; text-decoration: underline;
+    cursor: pointer; margin-left: 5px;
   }
 
   /* ── Leak Status Bar ── */
@@ -326,12 +326,16 @@
 </div>
 <div class="expand-content open" id="expand-content">
   <!-- Calibration -->
-  <div style="display:flex; align-items:center; gap:8px;">
-    <span style="font-size:12px; font-weight:700; color:#4a6a88;">L/pulse</span>
-    <input type="text" id="cal-input"
-           style="flex:1; padding:6px 8px; border:1.5px solid #c0ccd8; border-radius:8px; font-size:14px;"
-           placeholder="0.01321">
-    <button class="btn" style="flex:0; padding:6px 12px; font-size:13px;" onclick="saveCalibration()">💾</button>
+  <div style="display:flex; flex-direction:column; gap:6px;">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:12px; font-weight:700; color:#4a6a88; min-width:60px;">L/pulse</span>
+      <input type="text" id="cal-input"
+             style="width:110px; padding:6px 8px; border:1.5px solid #c0ccd8; border-radius:8px;
+                    font-size:15px; font-weight:700; color:#1a2a3a;"
+             placeholder="0.01321">
+      <button class="btn" style="width:44px; padding:6px 8px; font-size:13px;" onclick="saveCalibration()">💾</button>
+    </div>
+    <!-- Χώρος για μελλοντικές ρυθμίσεις -->
   </div>
   <!-- Log -->
   <div class="log-box" id="log-box">
